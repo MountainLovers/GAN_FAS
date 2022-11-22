@@ -22,7 +22,7 @@ class AlignedDataset(data.Dataset):
 
         if self.isTrain:
             self.A_transform = transforms.Compose([
-                transforms.Resize((256, 256), Image.BICUBIC),
+                transforms.Resize((128, 128), Image.BICUBIC),
                 transforms.RandomHorizontalFlip(),
                 transforms.ColorJitter(brightness=0.2, contrast=0.1, saturation=0.1),
                 transforms.RandomRotation(15),
@@ -38,7 +38,7 @@ class AlignedDataset(data.Dataset):
             ])
         else:
             self.A_transform = transforms.Compose([
-                transforms.Resize((256, 256), Image.BICUBIC),
+                transforms.Resize((128, 128), Image.BICUBIC),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.59416118, 0.51189164, 0.45280306],
                                      std=[0.25687563, 0.26251543, 0.26231294])]
