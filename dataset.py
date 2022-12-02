@@ -1,10 +1,14 @@
 import torch.utils.data as data
 import torchvision.transforms as transforms
+import torchvision.transforms.functional as tf
 from PIL import Image
 import cv2
 import torch
 import numpy as np
-from options import opt
+from numpy import float64
+import os
+import random
+# from options import opt
 
 class AlignedDataset(data.Dataset):
     def __init__(self, file_list="",input_nc = 3,output_nc=1,isTrain = True): #/train or /test
@@ -14,42 +18,20 @@ class AlignedDataset(data.Dataset):
         self.input_nc = input_nc
         self.output_nc = output_nc
         self.isTrain = isTrain
-        self.data_balance = opt.data_balance
-        if self.data_balance:
-            print("using data_balance")
+        self.data_balance = False
+        # self.data_balance = opt.data_balance
+        # if self.data_balance:
+        #     print("using data_balance")
         self.AB_file_list = file_list
         self.AB_paths = self.get_file_list()
 
         if self.isTrain:
-            self.A_transform = transforms.Compose([
-                transforms.Resize((128, 128), Image.BICUBIC),
-                transforms.RandomHorizontalFlip(),
-                transforms.ColorJitter(brightness=0.2, contrast=0.1, saturation=0.1),
-                transforms.RandomRotation(15),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.59416118, 0.51189164, 0.45280306],
-                                     std=[0.25687563, 0.26251543, 0.26231294])]
-            )
-
-            self.B_transform = transforms.Compose([
-                transforms.Resize((32, 32), Image.BICUBIC),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-            ])
+            self.A_transform = self.A_transform_train
         else:
-            self.A_transform = transforms.Compose([
-                transforms.Resize((128, 128), Image.BICUBIC),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.59416118, 0.51189164, 0.45280306],
-                                     std=[0.25687563, 0.26251543, 0.26231294])]
-            )
-            self.B_transform = transforms.Compose([
-                transforms.Resize((32, 32), Image.BICUBIC),
-                transforms.ToTensor(),
-            ])
-
+            self.A_transform = self.A_transform_test
 
     def get_file_list(self):
+        "/mnt/hdd.user/datasets/FAS/Oulu-NPU/Train_npy/1_1_01_1_rgb128.npy /mnt/hdd.user/datasets/FAS/Oulu-NPU/Train_rppg/1_1_01_1.npy 1"
         A_path = []
         B_path = []
         label = []
@@ -68,25 +50,61 @@ class AlignedDataset(data.Dataset):
 
         return (A_path,B_path,label)
 
+    def A_transform_train(self, video):
+        # Apply same transform for frames in the video
+        # video numpy -> list of PIL image & do transform -> tensor
+        hflip_rand = random.random()
+        angle = transforms.RandomRotation.get_params([-180, 180])
+        brightness = random.uniform(0.8, 1.2)
+        contrast = random.uniform(0.9, 1.1)
+        saturation = random.uniform(0.9, 1.1)
+        l = []
+        for f in video:
+            pic = Image.fromarray(np.uint8(f))
+            # RandomHorizontalFlip
+            if hflip_rand > 0.5:
+                pic = tf.hflip(pic)
+            # RandomRotation
+            pic = tf.rotate(pic, angle)
+            # ColorJitter
+            pic = tf.adjust_brightness(pic, brightness)
+            pic = tf.adjust_contrast(pic, contrast)
+            pic = tf.adjust_saturation(pic, saturation)
 
+            # To_Tensor
+            pic_aug = tf.to_tensor(pic)
+            # Normalize
+            pic_aug = tf.normalize(pic_aug, mean=[0.59416118, 0.51189164, 0.45280306],
+                                     std=[0.25687563, 0.26251543, 0.26231294])
+            l.append(pic_aug)
+        ret = torch.stack(l, dim=0)
+        return ret
+
+    def A_transform_test(self, video):
+        # without transform
+        for f in video:
+            pic = Image.fromarray(np.uint8(f))
+            # To_Tensor
+            pic_aug = tf.to_tensor(pic)
+            # Normalize
+            pic_aug = tf.normalize(pic_aug, mean=[0.59416118, 0.51189164, 0.45280306],
+                                     std=[0.25687563, 0.26251543, 0.26231294])
+            l.append(pic_aug)
+        ret = torch.stack(l, dim=0)
+        return ret
 
     def __getitem__(self, index):
         A_path = self.AB_paths[0][index]
         B_path = self.AB_paths[1][index]
         label = self.AB_paths[2][index]
-        A = Image.open(A_path).convert('RGB')
-        A_hsv = Image.open(A_path).convert('HSV')
-        B = Image.open(B_path).convert('L')
-        A_32 = transforms.Compose([
-                transforms.Resize((32, 32), Image.BICUBIC),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.59416118, 0.51189164, 0.45280306],
-                                        std=[0.25687563, 0.26251543, 0.26231294])]
-            )(A)
-
-        A = self.A_transform(A)
-        B = self.B_transform(B)
-        return {'A': A,'A_32':A_32,'B': B,'label':label,'A_paths': A_path, 'B_paths': B_path}
+        A_yuv128 = np.load(A_path)
+        if os.path.exists(B_path):
+            B = np.load(B_path)
+        else:
+            B = np.zeros(A_yuv128.shape[0], dtype=float64)
+        A = self.A_transform(A_yuv128)
+        B = torch.tensor(B)
+        return {'A': A, 'B': B, 'label': label, 'A_paths': A_path, 'B_paths': B_path}
 
     def __len__(self):
         """Return the total number of images in the dataset."""

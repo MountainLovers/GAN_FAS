@@ -12,7 +12,7 @@ class FaceModel(nn.Module):
         self.opt = opt
         self.model = opt.model
         self.w_cls = opt.w_cls 
-        self.w_L1 = opt.w_L1
+        self.w_NP = opt.w_NP
         self.w_gan = opt.w_gan
         self.gpu_ids = opt.gpu_ids
         self.device = torch.device('cuda:{}'.format(self.gpu_ids[0])) if self.gpu_ids else torch.device(
@@ -27,14 +27,15 @@ class FaceModel(nn.Module):
 
         self.model_names = ["Encoder","DepthDecoder","DepthDiscriminator","Classifier"]
         self.visual_names = ["real_A","real_B","fake_B"]
-        self.loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake','C']
+        self.loss_names = ['G_GAN', 'G_NP', 'D_real', 'D_fake','C']
         if self.isTrain:
 
 
             # Discriminator loss
             self.criterionGan = losses.GANLoss().to(self.device)
             # Decoder loss
-            self.criterionL1 = torch.nn.L1Loss()
+            self.criterionNP = losses.Neg_Pearson().to(self.device)
+            # self.criterionL1 = torch.nn.L1Loss()
             # cls loss
             self.criterionCls = [torch.nn.CrossEntropyLoss(),losses.FocalLoss()]
             # net G/
@@ -63,23 +64,26 @@ class FaceModel(nn.Module):
 
 
     def backward_D(self):
-
-        fake_AB = torch.cat((self.real_A_32, self.fake_B), 1) 
+        fake_B_repeated = torch.repeat_interleave(self.fake_B, 32*32, dim=2).view(-1, 1, frames, 32, 32)        # [B, 1, frames] -> [B, 1, frames, 32, 32], repeat to cat
+        fake_AB = torch.cat((self.real_A_32, fake_B_repeated), 1)       # [B, 3, frames, 32, 32] + [B, 1, frames, 32, 32] -> [B, 4, frames, 32, 32]
         pred_fake = self.netDepthDiscriminator(fake_AB.detach())
         self.loss_D_fake = self.criterionGan(pred_fake,False)
 
-        real_AB = torch.cat((self.real_A_32, self.real_B), 1) 
+        real_B_repeated = torch.repeat_interleave(self.real_B, 32*32, dim=2).view(-1, 1, frames, 32, 32)        # [B, 1, frames] -> [B, 1, frames, 32, 32], repeat to cat
+        real_AB = torch.cat((self.real_A_32, fakereal_B_repeated_B_repeated), 1)       # [B, 3, frames, 32, 32] + [B, 1, frames, 32, 32] -> [B, 4, frames, 32, 32]
         pred_real = self.netDepthDiscriminator(real_AB)
         self.loss_D_real = self.criterionGan(pred_real, True)
+
         self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5 *self.w_gan
         self.loss_D.backward()
+
     # depth
     def backward_G(self):
         fake_AB = torch.cat((self.real_A_32, self.fake_B), 1)
         pred_fake = self.netDepthDiscriminator(fake_AB)
         self.loss_G_GAN = self.criterionGan(pred_fake, True)
-        self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B)
-        self.loss_G = self.loss_G_L1*self.w_L1 + self.loss_G_GAN *self.w_gan
+        self.loss_G_NP = self.criterionNP(self.fake_B, self.real_B)
+        self.loss_G = self.loss_G_NP*self.w_NP + self.loss_G_GAN *self.w_gan
         self.loss_G.backward()
 
     def backward_C(self):

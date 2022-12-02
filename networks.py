@@ -170,26 +170,31 @@ class Encoder(nn.Module):
         return x
 
 
-class FeatEmbedder(nn.Module):
+class Classifier(nn.Module):
     def __init__(self, in_channels=128):
-        super(FeatEmbedder, self).__init__()
+        super(Classifier, self).__init__()
         self.conv = nn.Sequential(
-            conv3x3(in_channels, 128),
-            nn.BatchNorm2d(128),
+            nn.Conv3d(64, 64, [3,3,3], stride=1, padding=1),
+            nn.BatchNorm3d(64),
+            nn.ReLU(inplace=True),
+            nn.MaxPool3d(2),
+
+            nn.Conv3d(64, 128, [3,3,3], stride=1, padding=1),
+            nn.BatchNorm3d(128),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2),
 
-            conv3x3(128, 256),
-            nn.BatchNorm2d(256),
+            nn.Conv3d(128, 256, [3,3,3], stride=1, padding=1),
+            nn.BatchNorm3d(256),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2),
 
-            conv3x3(256, 512),
-            nn.BatchNorm2d(512),
+            nn.Conv3d(256, 512, [3,3,3], stride=1, padding=1),
+            nn.BatchNorm3d(512),
             nn.ReLU(inplace=True),
             )
 
-        self.avgpooling = nn.AdaptiveAvgPool2d((1, 1))
+        self.avgpooling = nn.AdaptiveAvgPool3d((1, 1, 1))
 
         self.classifier = nn.Sequential(nn.Linear(512, 128),
                                     nn.BatchNorm1d(128),
@@ -208,23 +213,41 @@ class FeatEmbedder(nn.Module):
         return F.normalize(feat, p=2, dim=1), pred 
 
 class Discriminator(nn.Module):
-    def __init__(self, nc=128, ndf=128):
+    def __init__(self):
         super(Discriminator,self).__init__()
 
-        self.model = nn.Sequential(
-            nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf),
+        self.Conv = nn.Sequential(
+            nn.Conv3d(4, 16, [1,5,5], stride=1, padding=[0,2,2]),
+            nn.BatchNorm3d(16),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf * 2),
+            nn.Conv3d(16, 32, [1,5,5], stride=1, padding=[0,2,2]),
+            nn.BatchNorm3d(32),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ndf * 4),
+            nn.Conv3d(32, 64, [3,3,3], stride=1, padding=1),
+            nn.BatchNorm3d(64),
+            nn.Conv3d(64, 64, [3,3,3], stride=1, padding=1),
+            nn.BatchNorm3d(64),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv2d(ndf * 4, 1, 4, 1, 1, bias=False),
+        )
 
+        self.GAP = m = nn.AdaptiveAvgPool3d((2, 2, 2))
+
+        self.FC = nn.Sequential(
+            nn.Linear(512, 128),
+            nn.ReLU(),
+            nn.Linear(128, 32),
+            nn.ReLU(),
+            nn.Linear(32, 1),
+            nn.Sigmoid()
         )
         
-    def forward(self, x):
-        output = self.model(x)
+    def forward(self, pic, sig):
+        b, c, d, w, h = pic.size()
+        sigs = torch.repeat_interleave(sig, w*h, dim=1).view(b, d, w, h)
+        sigs = sigs.unsqueeze(dim=1)    # [B, D, W, H] -> [B, 1, D, W, H]
+        x = torch.cat(pic, sigs)
+        x = self.Conv(x)                # [B, 4, D, W, H] -> [B, 64, D, W, H]
+        x = self.GAP(x)                 # [B, 64, D, W, H] -> [B, 64, 2, 2, 2]
+        x = x.reshape(b, -1)            # [B, 64, 2, 2, 2] -> [B, 512]
+        output = self.FC(x)
         return output
