@@ -77,11 +77,12 @@ class AlignedDataset(data.Dataset):
             pic_aug = tf.normalize(pic_aug, mean=[0.59416118, 0.51189164, 0.45280306],
                                      std=[0.25687563, 0.26251543, 0.26231294])
             l.append(pic_aug)
-        ret = torch.stack(l, dim=0)
+        ret = torch.stack(l, dim=1)
         return ret
 
     def A_transform_test(self, video):
         # without transform
+        l = []
         for f in video:
             pic = Image.fromarray(np.uint8(f))
             # To_Tensor
@@ -90,7 +91,7 @@ class AlignedDataset(data.Dataset):
             pic_aug = tf.normalize(pic_aug, mean=[0.59416118, 0.51189164, 0.45280306],
                                      std=[0.25687563, 0.26251543, 0.26231294])
             l.append(pic_aug)
-        ret = torch.stack(l, dim=0)
+        ret = torch.stack(l, dim=1)
         return ret
 
     def __getitem__(self, index):

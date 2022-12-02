@@ -2,6 +2,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.nn import init
+from torch.nn.modules.utils import _triple
+import math
 
 def init_weights(net, init_type='normal', init_gain=0.02):
     """Initialize network weights.
@@ -29,7 +31,7 @@ def init_weights(net, init_type='normal', init_gain=0.02):
                 raise NotImplementedError('initialization method [%s] is not implemented' % init_type)
             if hasattr(m, 'bias') and m.bias is not None:
                 init.constant_(m.bias.data, 0.0)
-        elif classname.find('BatchNorm2d') != -1:  # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
+        elif classname.find('BatchNorm3d') != -1:  # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
             init.normal_(m.weight.data, 1.0, init_gain)
             init.constant_(m.bias.data, 0.0)
 
@@ -116,7 +118,7 @@ class Decoder(nn.Module):
         return x
 
 class Encoder(nn.Module):
-    def __init__(self, in_channels=3):
+    def __init__(self):
         super(Encoder, self).__init__()
 
         self.Conv1 = nn.Sequential(
@@ -182,12 +184,12 @@ class Classifier(nn.Module):
             nn.Conv3d(64, 128, [3,3,3], stride=1, padding=1),
             nn.BatchNorm3d(128),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),
+            nn.MaxPool3d(2),
 
             nn.Conv3d(128, 256, [3,3,3], stride=1, padding=1),
             nn.BatchNorm3d(256),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),
+            nn.MaxPool3d(2),
 
             nn.Conv3d(256, 512, [3,3,3], stride=1, padding=1),
             nn.BatchNorm3d(512),
