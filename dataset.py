@@ -5,7 +5,7 @@ from PIL import Image
 import cv2
 import torch
 import numpy as np
-from numpy import float64
+from numpy import float32
 import os
 import random
 # from options import opt
@@ -24,6 +24,8 @@ class AlignedDataset(data.Dataset):
         #     print("using data_balance")
         self.AB_file_list = file_list
         self.AB_paths = self.get_file_list()
+
+        self.tt = transforms.ToTensor()
 
         if self.isTrain:
             self.A_transform = self.A_transform_train
@@ -53,14 +55,19 @@ class AlignedDataset(data.Dataset):
     def A_transform_train(self, video):
         # Apply same transform for frames in the video
         # video numpy -> list of PIL image & do transform -> tensor
+        
+        cnt = 0
         hflip_rand = random.random()
-        angle = transforms.RandomRotation.get_params([-180, 180])
+        angle = transforms.RandomRotation.get_params([-15, 15])
+        # print(angle)
         brightness = random.uniform(0.8, 1.2)
         contrast = random.uniform(0.9, 1.1)
         saturation = random.uniform(0.9, 1.1)
         l = []
         for f in video:
-            pic = Image.fromarray(np.uint8(f))
+            if cnt >= 64:
+                break
+            pic = self.tt(f)
             # RandomHorizontalFlip
             if hflip_rand > 0.5:
                 pic = tf.hflip(pic)
@@ -70,27 +77,30 @@ class AlignedDataset(data.Dataset):
             pic = tf.adjust_brightness(pic, brightness)
             pic = tf.adjust_contrast(pic, contrast)
             pic = tf.adjust_saturation(pic, saturation)
-
-            # To_Tensor
-            pic_aug = tf.to_tensor(pic)
             # Normalize
-            pic_aug = tf.normalize(pic_aug, mean=[0.59416118, 0.51189164, 0.45280306],
-                                     std=[0.25687563, 0.26251543, 0.26231294])
-            l.append(pic_aug)
+            # pic = tf.normalize(pic, mean=[0.59416118, 0.51189164, 0.45280306],
+                                    #  std=[0.25687563, 0.26251543, 0.26231294])
+            l.append(pic)
+            cnt += 1
         ret = torch.stack(l, dim=1)
         return ret
 
     def A_transform_test(self, video):
         # without transform
         l = []
+        cnt = 0
         for f in video:
-            pic = Image.fromarray(np.uint8(f))
-            # To_Tensor
-            pic_aug = tf.to_tensor(pic)
+            if cnt >= 64:
+                break
+            pic = self.tt(f)
+            # pic = Image.fromarray(np.uint8(f))
+            # # To_Tensor
+            # pic_aug = tf.to_tensor(pic)
             # Normalize
-            pic_aug = tf.normalize(pic_aug, mean=[0.59416118, 0.51189164, 0.45280306],
-                                     std=[0.25687563, 0.26251543, 0.26231294])
-            l.append(pic_aug)
+            # pic = tf.normalize(pic, mean=[0.59416118, 0.51189164, 0.45280306],
+                                    #  std=[0.25687563, 0.26251543, 0.26231294])
+            l.append(pic)
+            cnt += 1
         ret = torch.stack(l, dim=1)
         return ret
 
@@ -100,10 +110,11 @@ class AlignedDataset(data.Dataset):
         label = self.AB_paths[2][index]
         A_yuv128 = np.load(A_path)
         if os.path.exists(B_path):
-            B = np.load(B_path)
+            B = np.load(B_path).astype(float32)
         else:
-            B = np.zeros(A_yuv128.shape[0], dtype=float64)
+            B = np.zeros(A_yuv128.shape[0], dtype=float32)
         A = self.A_transform(A_yuv128)
+        B = B[:64]
         B = torch.tensor(B)
         return {'A': A, 'B': B, 'label': label, 'A_paths': A_path, 'B_paths': B_path}
 

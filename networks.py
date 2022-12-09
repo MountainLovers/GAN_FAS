@@ -19,6 +19,7 @@ def init_weights(net, init_type='normal', init_gain=0.02):
     def init_func(m):
         classname = m.__class__.__name__
         if hasattr(m, 'weight') and (classname.find('Conv') != -1 or classname.find('Linear') != -1):
+            print("classname: {}, init1".format(classname))
             if init_type == 'normal':
                 init.normal_(m.weight.data, 0.0, init_gain)
             elif init_type == 'xavier':
@@ -31,11 +32,12 @@ def init_weights(net, init_type='normal', init_gain=0.02):
                 raise NotImplementedError('initialization method [%s] is not implemented' % init_type)
             if hasattr(m, 'bias') and m.bias is not None:
                 init.constant_(m.bias.data, 0.0)
-        elif classname.find('BatchNorm3d') != -1:  # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
+        elif classname.find('BatchNorm') != -1:  # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
+            print("classname: {}, init2".format(classname))
             init.normal_(m.weight.data, 1.0, init_gain)
             init.constant_(m.bias.data, 0.0)
 
-    print('initialize network with %s' % init_type)
+    print('initialize network with {}'.format(init_type))
     net.apply(init_func)  # apply the initialization function <init_func>
 
 def init_net(net,init_type='kaiming', init_gain=0.02, gpu_ids=[]):
@@ -150,6 +152,10 @@ class Encoder(nn.Module):
 
         self.AvgpoolSpa = nn.AvgPool3d((1, 2, 2), stride=(1, 2, 2))
 
+        self.t1 = nn.Conv3d(3, 16, [1,5,5], stride=1, padding=[0,2,2])
+        self.t2 = nn.BatchNorm3d(16)
+        self.t3 = nn.ReLU(inplace=True)
+
     def forward(self, x):
         """
             inputs :
@@ -157,17 +163,29 @@ class Encoder(nn.Module):
             returns :
                 x : latent-space feature [B, C:64, T:64, W:32, H:32]
         """
-        x = self.Conv1(x)                   # [3, 64, 128, 128] -> [16, 64, 128, 128]
+        print("input shape: {}".format(x.shape))
+        print("x0.0: {}".format(x))
+        # x = self.Conv1(x)                   # [3, 64, 128, 128] -> [16, 64, 128, 128]
+        x = self.t1(x)
+        print("x0.1: {}".format(x))
+        x = self.t2(x)
+        print("x0.2: {}".format(x))
+        x = self.t3(x)
+        print("x0.3: {}".format(x))
 
         x = self.AvgpoolSpa(x)              # [16, 64, 128, 128] -> [16, 64, 64, 64]
+        print("x1: {}".format(x))
 
         x = self.STConv1(x)                 # [16, 64, 64, 64] -> [32, 64, 64, 64]
         x = self.STConv2(x)                 # [32, 64, 64, 64] -> [32, 64, 64, 64]
+        print("x2: {}".format(x))
 
         x = self.AvgpoolSpa(x)              # [32, 64, 64, 64] -> [32, 64, 32, 32]
+        print("x3: {}".format(x))
 
         x = self.STConv3(x)                 # [32, 64, 32, 32] -> [64, 64, 32, 32]
         x = self.STConv4(x)                 # [64, 64, 32, 32] -> [64, 64, 32, 32]
+        print("x4: {}".format(x))
 
         return x
 
@@ -206,13 +224,22 @@ class Classifier(nn.Module):
                     
 
     def forward(self, x):
+        # print("input: {}".format(x.shape))
+        # print("!!!!!!!!!!!!!!!!!!!!!!!!!! 1 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         x = self.conv(x)
+        # print("after conv: {}".format(x.shape))
+        # print("!!!!!!!!!!!!!!!!!!!!!!!!!! 2 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         x = self.avgpooling(x)
+        # print("after avgpooling: {}".format(x.shape))
+        # print("!!!!!!!!!!!!!!!!!!!!!!!!!! 3 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         x = x.view(x.size(0), -1)
-        feat = x
+        # print("after view: {}".format(x.shape))
+        # print("!!!!!!!!!!!!!!!!!!!!!!!!!! 4 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        # feat = x
         pred = self.classifier(x)
+        # print("!!!!!!!!!!!!!!!!!!!!!!!!!! 5 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
          
-        return F.normalize(feat, p=2, dim=1), pred 
+        return pred 
 
 class Discriminator(nn.Module):
     def __init__(self):
@@ -243,11 +270,9 @@ class Discriminator(nn.Module):
             nn.Sigmoid()
         )
         
-    def forward(self, pic, sig):
-        b, c, d, w, h = pic.size()
-        sigs = torch.repeat_interleave(sig, w*h, dim=1).view(b, d, w, h)
-        sigs = sigs.unsqueeze(dim=1)    # [B, D, W, H] -> [B, 1, D, W, H]
-        x = torch.cat(pic, sigs)
+    def forward(self, x):
+        # print("In Discriminator(), x.dtype: {}".format(x.dtype))
+        b = x.shape[0]
         x = self.Conv(x)                # [B, 4, D, W, H] -> [B, 64, D, W, H]
         x = self.GAP(x)                 # [B, 64, D, W, H] -> [B, 64, 2, 2, 2]
         x = x.reshape(b, -1)            # [B, 64, 2, 2, 2] -> [B, 512]
