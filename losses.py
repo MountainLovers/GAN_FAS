@@ -79,11 +79,11 @@ class Neg_Pearson(nn.Module):    # Pearson range [-1, 1] so if < 0, abs|loss| ; 
             sum_y2 = torch.sum(torch.pow(labels[i],2)) # y^2
             N = preds.shape[1]
             # pearson = (N*sum_xy - sum_x*sum_y)/(torch.sqrt((N*sum_x2 - torch.pow(sum_x,2))*(N*sum_y2 - torch.pow(sum_y,2))))
+            
             num = (N*sum_xy - sum_x*sum_y)
-            den = (torch.sqrt((N*sum_x2 - torch.pow(sum_x,2))*(N*sum_y2 - torch.pow(sum_y,2))))
-            if den == 0:
-                num = 0
-                den = den + 0.01
+            den = (torch.sqrt((N*sum_x2 - torch.pow(sum_x,2))*(N*sum_y2 - torch.pow(sum_y,2)) + 1e-8))
+            # if den == 0:
+            #     den = den + 1e-8
             pearson = num / den
             #if (pearson>=0).data.cpu().numpy():    # torch.cuda.ByteTensor -->  numpy
             #    loss += 1 - pearson

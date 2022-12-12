@@ -67,6 +67,7 @@ class FaceModel(nn.Module):
 
     def forward(self):
         print("-------- FORWARD -----------")
+        torch.autograd.set_detect_anomaly(True)
         for param_tensor in self.netEncoder.state_dict(): # 字典的遍历默认是遍历 key，所以param_tensor实际上是键值
             print(param_tensor,'\t',self.netEncoder.state_dict()[param_tensor])
         # print("In forward(), real_A: {}".format(self.real_A.shape))
@@ -120,15 +121,17 @@ class FaceModel(nn.Module):
             # update D
             print("-------- UPDATE D -------------")
             self.set_requires_grad(self.netSigDiscriminator, True) 
-            self.optimizer_discriminate.zero_grad() 
-            self.backward_D()
+            self.optimizer_discriminate.zero_grad()
+            with torch.autograd.detect_anomaly():
+                self.backward_D()
             self.optimizer_discriminate.step()
         if self.model =="model3" or self.model =="model2":
             # update G_depth
             print("-------- UPDATE G -------------")
             self.set_requires_grad(self.netSigDiscriminator, False) 
             self.optimizer_sig.zero_grad()
-            self.backward_G() 
+            with torch.autograd.detect_anomaly():
+                self.backward_G() 
             self.optimizer_sig.step() 
         if self.model =="model3" or self.model =="model2" or self.model =="model1":
             print("-------- UPDATE C -------------")
