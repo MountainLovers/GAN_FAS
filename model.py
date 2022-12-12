@@ -67,9 +67,10 @@ class FaceModel(nn.Module):
 
     def forward(self):
         print("-------- FORWARD -----------")
-        torch.autograd.set_detect_anomaly(True)
-        for param_tensor in self.netEncoder.state_dict(): # 字典的遍历默认是遍历 key，所以param_tensor实际上是键值
-            print(param_tensor,'\t',self.netEncoder.state_dict()[param_tensor])
+        # torch.autograd.set_detect_anomaly(True)
+        # for param_tensor in self.netEncoder.state_dict(): # 字典的遍历默认是遍历 key，所以param_tensor实际上是键值
+        #     print(param_tensor,'\t',self.netEncoder.state_dict()[param_tensor])
+        
         # print("In forward(), real_A: {}".format(self.real_A.shape))
         print("real_A: {}".format(self.real_A))
         self.lantent = self.netEncoder(self.real_A)
@@ -122,24 +123,37 @@ class FaceModel(nn.Module):
             print("-------- UPDATE D -------------")
             self.set_requires_grad(self.netSigDiscriminator, True) 
             self.optimizer_discriminate.zero_grad()
-            with torch.autograd.detect_anomaly():
-                self.backward_D()
+            # with torch.autograd.detect_anomaly():
+            #     self.backward_D()
+            self.backward_D()
+            for name, param in self.netSigDiscriminator.named_parameters():
+                print(name, torch.isnan(param.grad).all())
             self.optimizer_discriminate.step()
+            self.optimizer_discriminate.zero_grad()
         if self.model =="model3" or self.model =="model2":
             # update G_depth
             print("-------- UPDATE G -------------")
             self.set_requires_grad(self.netSigDiscriminator, False) 
             self.optimizer_sig.zero_grad()
-            with torch.autograd.detect_anomaly():
-                self.backward_G() 
-            self.optimizer_sig.step() 
+            # with torch.autograd.detect_anomaly():
+            #     self.backward_G()
+            self.backward_G() 
+            for name, param in self.netEncoder.named_parameters():
+                print(name, torch.isnan(param.grad).all())
+            for name, param in self.netSigDecoder.named_parameters():
+                print(name, torch.isnan(param.grad).all())
+            self.optimizer_sig.step()
+            self.optimizer_sig.zero_grad()
         if self.model =="model3" or self.model =="model2" or self.model =="model1":
             print("-------- UPDATE C -------------")
             self.forward()
             # update C
             self.optimizer_cls.zero_grad()
             self.backward_C()
+            for name, param in self.netClassifier.named_parameters():
+                print(name, torch.isnan(param.grad).all())
             self.optimizer_cls.step()
+            self.optimizer_cls.zero_grad()
 
     def eval(self):
         self.isTrain = False
