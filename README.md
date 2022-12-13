@@ -13,9 +13,9 @@ The hardware environment is NVIDIA GTX 1080Ti.
 We need to prepare 'file_list.txt', the data format inside is as follows:
 
 ```
-/data/oulu/spatial/Train_files/1_1_01_1_avi/frame4.jpg /data/oulu/depth/Train_files/1_1_01_1_avi/frame4.jpg 1
+/data/oulu/spatial/Train_npynew/1_1_01_1.npy /data/oulu/depth/Train_rppg/1_1_01_1.npy 1
 ```
-the `/data/oulu/spatial/Train_files/1_1_01_1_avi/frame4.jpg` is the location of the RGB picture, and `/data/oulu/depth/Train_files/1_1_01_1_avi/frame4.jpg` is the position corresponding to the Depth picture. `1` is label.
+the `/data/oulu/spatial/Train_npynew/1_1_01_1.npy` is the location of the processed video, and `//data/oulu/depth/Train_rppg/1_1_01_1.npy` is the position corresponding to the rppg signal. `1` is label.
 
 ## Train and Test 
 
@@ -48,3 +48,8 @@ python test.py  --name model2
 python test.py  --name model2
 ```
 to test different models.
+
+# Pre Process
+```
+python video2npy.py --dir=1 --threads=10 --width=32 --height=32
+```

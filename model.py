@@ -20,7 +20,7 @@ class FaceModel(nn.Module):
         torch.backends.cudnn.benchmark = True
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
         self.isTrain = isTrain
-        self.netEncoder = networks.init_net(networks.Encoder(),gpu_ids=self.gpu_ids)
+        self.netEncoder = networks.init_net(networks.Encoder32(),gpu_ids=self.gpu_ids)
         self.netClassifier = networks.init_net(networks.Classifier(), gpu_ids=self.gpu_ids)
         self.netSigDecoder = networks.init_net(networks.Decoder(),gpu_ids=self.gpu_ids)
         self.netSigDiscriminator = networks.init_net(networks.Discriminator(),gpu_ids=self.gpu_ids)
@@ -72,12 +72,12 @@ class FaceModel(nn.Module):
         #     print(param_tensor,'\t',self.netEncoder.state_dict()[param_tensor])
         
         # print("In forward(), real_A: {}".format(self.real_A.shape))
-        print("real_A: {}".format(self.real_A))
+        # print("real_A: {}".format(self.real_A))
         self.lantent = self.netEncoder(self.real_A)
         # print("In forward(), lantent: {}".format(self.lantent.shape))
-        print("lantent: {}".format(self.lantent))
+        # print("lantent: {}".format(self.lantent))
         self.fake_B = self.netSigDecoder(self.lantent)
-        print("fake_B: {}".format(self.fake_B))
+        # print("fake_B: {}".format(self.fake_B))
         # print("In forward(), fake_B: {}".format(self.fake_B.shape))
         self.output = self.netClassifier(self.lantent)
 

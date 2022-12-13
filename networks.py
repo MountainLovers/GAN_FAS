@@ -119,9 +119,9 @@ class Decoder(nn.Module):
      
         return x
 
-class Encoder(nn.Module):
+class Encoder128(nn.Module):
     def __init__(self):
-        super(Encoder, self).__init__()
+        super(Encoder128, self).__init__()
 
         self.Conv1 = nn.Sequential(
             nn.Conv3d(3, 16, [1,5,5], stride=1, padding=[0,2,2]),
@@ -152,9 +152,9 @@ class Encoder(nn.Module):
 
         self.AvgpoolSpa = nn.AvgPool3d((1, 2, 2), stride=(1, 2, 2))
 
-        self.t1 = nn.Conv3d(3, 16, [1,5,5], stride=1, padding=[0,2,2])
-        self.t2 = nn.BatchNorm3d(16)
-        self.t3 = nn.ReLU(inplace=True)
+        # self.t1 = nn.Conv3d(3, 16, [1,5,5], stride=1, padding=[0,2,2])
+        # self.t2 = nn.BatchNorm3d(16)
+        # self.t3 = nn.ReLU(inplace=True)
 
     def forward(self, x):
         """
@@ -163,15 +163,16 @@ class Encoder(nn.Module):
             returns :
                 x : latent-space feature [B, C:64, T:64, W:32, H:32]
         """
-        print("input shape: {}".format(x.shape))
-        print("x0.0: {}".format(x))
-        # x = self.Conv1(x)                   # [3, 64, 128, 128] -> [16, 64, 128, 128]
-        x = self.t1(x)
-        print("x0.1: {}".format(x))
-        x = self.t2(x)
-        print("x0.2: {}".format(x))
-        x = self.t3(x)
-        print("x0.3: {}".format(x))
+        # print("input shape: {}".format(x.shape))
+        # print("x0.0: {}".format(x))
+        # x = self.t1(x)
+        # print("x0.1: {}".format(x))
+        # x = self.t2(x)
+        # print("x0.2: {}".format(x))
+        # x = self.t3(x)
+        # print("x0.3: {}".format(x))
+
+        x = self.Conv1(x)                   # [3, 64, 128, 128] -> [16, 64, 128, 128]
 
         x = self.AvgpoolSpa(x)              # [16, 64, 128, 128] -> [16, 64, 64, 64]
         print("x1: {}".format(x))
@@ -189,6 +190,57 @@ class Encoder(nn.Module):
 
         return x
 
+class Encoder32(nn.Module):
+    def __init__(self):
+        super(Encoder32, self).__init__()
+
+        self.Conv1 = nn.Sequential(
+            nn.Conv3d(3, 16, [1,5,5], stride=1, padding=[0,2,2]),
+            nn.BatchNorm3d(16),
+            nn.ReLU(inplace=True),
+        )
+
+        self.STConv1 = nn.Sequential(
+            SpatioTemporalConv(16, 32, [3, 3, 3], stride=1, padding=1),
+            nn.BatchNorm3d(32),
+            nn.ReLU(inplace=True),
+        )
+        self.STConv2 = nn.Sequential(
+            SpatioTemporalConv(32, 32, [3, 3, 3], stride=1, padding=1),
+            nn.BatchNorm3d(32),
+            nn.ReLU(inplace=True),
+        )
+        self.STConv3 = nn.Sequential(
+            SpatioTemporalConv(32, 64, [3, 3, 3], stride=1, padding=1),
+            nn.BatchNorm3d(64),
+            nn.ReLU(inplace=True),
+        )
+        self.STConv4 = nn.Sequential(
+            SpatioTemporalConv(64, 64, [3, 3, 3], stride=1, padding=1),
+            nn.BatchNorm3d(64),
+            nn.ReLU(inplace=True),
+        )
+
+    def forward(self, x):
+        """
+            inputs :
+                x : input feature [B, C:3, T:64, W:32, H:32]
+            returns :
+                x : latent-space feature [B, C:64, T:64, W:32, H:32]
+        """
+
+        x = self.Conv1(x)                   # [3, 64, 32, 32] -> [16, 64, 32, 32]
+        # print("x1: {}".format(x))
+
+        x = self.STConv1(x)                 # [16, 64, 32, 32] -> [32, 64, 32, 32]
+        x = self.STConv2(x)                 # [32, 64, 32, 32] -> [32, 64, 32, 32]
+        # print("x2: {}".format(x))
+
+        x = self.STConv3(x)                 # [32, 64, 32, 32] -> [64, 64, 32, 32]
+        x = self.STConv4(x)                 # [64, 64, 32, 32] -> [64, 64, 32, 32]
+        # print("x3: {}".format(x))
+
+        return x
 
 class Classifier(nn.Module):
     def __init__(self, in_channels=128):
@@ -259,7 +311,7 @@ class Discriminator(nn.Module):
             nn.LeakyReLU(0.2, inplace=True),
         )
 
-        self.GAP = m = nn.AdaptiveAvgPool3d((2, 2, 2))
+        self.GAP = nn.AdaptiveAvgPool3d((2, 2, 2))
 
         self.FC = nn.Sequential(
             nn.Linear(512, 128),
