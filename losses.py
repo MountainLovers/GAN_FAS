@@ -89,7 +89,7 @@ class Neg_Pearson(nn.Module):    # Pearson range [-1, 1] so if < 0, abs|loss| ; 
             #    loss += 1 - pearson
             #else:
             #    loss += 1 - torch.abs(pearson)
-            print("num: {}, den: {}, pearson: {}".format(num, den, pearson))
+            # print("num: {}, den: {}, pearson: {}".format(num, den, pearson))
             loss += 1 - pearson
             
             

@@ -32,19 +32,21 @@ if __name__ == '__main__':
     test_file_list = opt.test_file_list
     model = FaceModel(opt,isTrain = True,input_nc = 3)
     test_data_loader = DataLoader(AlignedDataset(test_file_list,isTrain = False), batch_size=test_batch_size,
-                                   shuffle=True, num_workers=8)
+                                   shuffle=True, num_workers=2)
     dev_data_loader = DataLoader(AlignedDataset(dev_file_list,isTrain = False), batch_size=test_batch_size,
-                                   shuffle=True, num_workers=8)
+                                   shuffle=True, num_workers=2)
 
     train_dataset = AlignedDataset(train_file_list) 
     train_data_loader = DataLoader(train_dataset, batch_size=train_batch_size,
-                                    shuffle = True,num_workers=8)
+                                    shuffle = True,num_workers=2)
 
     writer.iter = 0
     for e in range(opt.epoch):
+        print("!!!!!!!!!!!! EPOCH {} !!!!!!!!!!!!!".format(e))
         model.train()
         pad_meter_train = PADMeter()
         for i, data in enumerate(train_data_loader):
+            print("!!!!!!!!!!!! BATCH {} !!!!!!!!!!!!!".format(i))
             model.set_input(data)
             model.optimize_parameters()
             print("output: {}".format(model.output))

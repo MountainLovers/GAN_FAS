@@ -81,7 +81,10 @@ class PADMeter(object):
         self.bpcer = frr
         self.acer = (self.apcer + self.bpcer) /2.0
         self.hter = (far + frr) / 2.0
-        self.auc = roc_auc_score(self.label, self.output)
+        try:
+            self.auc = roc_auc_score(self.label, self.output)
+        except ValueError:
+            pass
 
 
     def get_accuracy(self,thr=None):

@@ -125,11 +125,13 @@ class FaceModel(nn.Module):
             self.optimizer_discriminate.zero_grad()
             # with torch.autograd.detect_anomaly():
             #     self.backward_D()
+            print("-------- UPDATE D before backward_D -------------")
             self.backward_D()
-            for name, param in self.netSigDiscriminator.named_parameters():
-                print(name, torch.isnan(param.grad).all())
+            print("-------- UPDATE D backward_D done -------------")
+            # for name, param in self.netSigDiscriminator.named_parameters():
+            #     print(name, torch.isnan(param.grad).all())
             self.optimizer_discriminate.step()
-            self.optimizer_discriminate.zero_grad()
+            # self.optimizer_discriminate.zero_grad()
         if self.model =="model3" or self.model =="model2":
             # update G_depth
             print("-------- UPDATE G -------------")
@@ -138,22 +140,22 @@ class FaceModel(nn.Module):
             # with torch.autograd.detect_anomaly():
             #     self.backward_G()
             self.backward_G() 
-            for name, param in self.netEncoder.named_parameters():
-                print(name, torch.isnan(param.grad).all())
-            for name, param in self.netSigDecoder.named_parameters():
-                print(name, torch.isnan(param.grad).all())
+            # for name, param in self.netEncoder.named_parameters():
+            #     print(name, torch.isnan(param.grad).all())
+            # for name, param in self.netSigDecoder.named_parameters():
+            #     print(name, torch.isnan(param.grad).all())
             self.optimizer_sig.step()
-            self.optimizer_sig.zero_grad()
+            # self.optimizer_sig.zero_grad()
         if self.model =="model3" or self.model =="model2" or self.model =="model1":
             print("-------- UPDATE C -------------")
             self.forward()
             # update C
             self.optimizer_cls.zero_grad()
             self.backward_C()
-            for name, param in self.netClassifier.named_parameters():
-                print(name, torch.isnan(param.grad).all())
+            # for name, param in self.netClassifier.named_parameters():
+            #     print(name, torch.isnan(param.grad).all())
             self.optimizer_cls.step()
-            self.optimizer_cls.zero_grad()
+            # self.optimizer_cls.zero_grad()
 
     def eval(self):
         self.isTrain = False
