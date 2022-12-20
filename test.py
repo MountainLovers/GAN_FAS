@@ -21,9 +21,9 @@ def eval_model(data_loader,model):
 if __name__ == '__main__':
     dev_file_list = opt.dev_file_list
     test_file_list = opt.test_file_list
-    dev_data_loader = DataLoader(AlignedDataset(dev_file_list,isTrain= False), batch_size=20,
+    dev_data_loader = DataLoader(AlignedDataset(dev_file_list,isTrain= False), batch_size=opt.batch_size,
                                    shuffle=False, num_workers=8)
-    test_data_loader = DataLoader(AlignedDataset(test_file_list,isTrain= False), batch_size=20,
+    test_data_loader = DataLoader(AlignedDataset(test_file_list,isTrain= False), batch_size=opt.batch_size,
                                    shuffle=False, num_workers=8)
     model = FaceModel(opt,isTrain = False)
     model.load_networks("best")
