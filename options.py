@@ -7,9 +7,9 @@ parser.add_argument('--epoch', type=int, default=30, help='epoch')
 parser.add_argument('--gpu_ids', type=str, default='0,1,2', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
 
 
-parser.add_argument('--train_file_list', type=str, default='/mnt/hdd.user/datasets/FAS/Oulu-NPU/Protocols/Protocol_1/Train_32_proto.txt', help='train_file_list')
-parser.add_argument('--dev_file_list', type=str, default='/mnt/hdd.user/datasets/FAS/Oulu-NPU/Protocols/Protocol_1/Dev_32_proto.txt', help='dev_file_list')
-parser.add_argument('--test_file_list', type=str, default='/mnt/hdd.user/datasets/FAS/Oulu-NPU/Protocols/Protocol_1/Test_32_proto.txt', help='test_file_list')
+parser.add_argument('--train_file_list', type=str, default='/mnt/hdd.user/datasets/FAS/Oulu-NPU/Protocols/Protocol_2/Train_32_proto.txt', help='train_file_list')
+parser.add_argument('--dev_file_list', type=str, default='/mnt/hdd.user/datasets/FAS/Oulu-NPU/Protocols/Protocol_2/Dev_32_proto.txt', help='dev_file_list')
+parser.add_argument('--test_file_list', type=str, default='/mnt/hdd.user/datasets/FAS/Oulu-NPU/Protocols/Protocol_2/Test_32_proto.txt', help='test_file_list')
 
 parser.add_argument('--name', type=str, default='tmp',
                     help='name of the experiment. It decides where to store samples and models')
