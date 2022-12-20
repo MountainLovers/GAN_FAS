@@ -19,7 +19,7 @@ def init_weights(net, init_type='normal', init_gain=0.02):
     def init_func(m):
         classname = m.__class__.__name__
         if hasattr(m, 'weight') and (classname.find('Conv') != -1 or classname.find('Linear') != -1):
-            print("classname: {}, init1".format(classname))
+            # print("classname: {}, init1".format(classname))
             if init_type == 'normal':
                 init.normal_(m.weight.data, 0.0, init_gain)
             elif init_type == 'xavier':
@@ -33,11 +33,11 @@ def init_weights(net, init_type='normal', init_gain=0.02):
             if hasattr(m, 'bias') and m.bias is not None:
                 init.constant_(m.bias.data, 0.0)
         elif classname.find('BatchNorm') != -1:  # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
-            print("classname: {}, init2".format(classname))
+            # print("classname: {}, init2".format(classname))
             init.normal_(m.weight.data, 1.0, init_gain)
             init.constant_(m.bias.data, 0.0)
 
-    print('initialize network with {}'.format(init_type))
+    # print('initialize network with {}'.format(init_type))
     net.apply(init_func)  # apply the initialization function <init_func>
 
 def init_net(net,init_type='kaiming', init_gain=0.02, gpu_ids=[]):
@@ -175,18 +175,18 @@ class Encoder128(nn.Module):
         x = self.Conv1(x)                   # [3, 64, 128, 128] -> [16, 64, 128, 128]
 
         x = self.AvgpoolSpa(x)              # [16, 64, 128, 128] -> [16, 64, 64, 64]
-        print("x1: {}".format(x))
+        # print("x1: {}".format(x))
 
         x = self.STConv1(x)                 # [16, 64, 64, 64] -> [32, 64, 64, 64]
         x = self.STConv2(x)                 # [32, 64, 64, 64] -> [32, 64, 64, 64]
-        print("x2: {}".format(x))
+        # print("x2: {}".format(x))
 
         x = self.AvgpoolSpa(x)              # [32, 64, 64, 64] -> [32, 64, 32, 32]
-        print("x3: {}".format(x))
+        # print("x3: {}".format(x))
 
         x = self.STConv3(x)                 # [32, 64, 32, 32] -> [64, 64, 32, 32]
         x = self.STConv4(x)                 # [64, 64, 32, 32] -> [64, 64, 32, 32]
-        print("x4: {}".format(x))
+        # print("x4: {}".format(x))
 
         return x
 

@@ -49,10 +49,10 @@ if __name__ == '__main__':
             print("!!!!!!!!!!!! BATCH {} !!!!!!!!!!!!!".format(i))
             model.set_input(data)
             model.optimize_parameters()
-            print("output: {}".format(model.output))
+            # print("output: {}".format(model.output))
             class_output = nn.functional.softmax(model.output, dim=1)
-            print("label: {}".format(model.label.cpu().data.numpy()))
-            print("class_output: {}".format(class_output.cpu().data.numpy()))
+            # print("label: {}".format(model.label.cpu().data.numpy()))
+            # print("class_output: {}".format(class_output.cpu().data.numpy()))
             pad_meter_train.update(model.label.cpu().data.numpy(),
                              class_output.cpu().data.numpy())
 
