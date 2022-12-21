@@ -99,6 +99,37 @@ class SpatioTemporalConv(nn.Module):
         x = self.temporal_conv(x)                      
         return x
 
+class ChannelAttention(nn.Module):
+    def __init__(self, in_planes, ratio=16):
+        super(ChannelAttention, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool3d(1)
+        self.max_pool = nn.AdaptiveMaxPool3d(1)
+           
+        self.mlp = nn.Sequential(nn.Conv3d(in_planes, in_planes // 16, 1, bias=True),
+                               nn.ReLU(),
+                               nn.Conv3d(in_planes // 16, in_planes, 1, bias=True))
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avg_out = self.mlp(self.avg_pool(x))
+        max_out = self.mlp(self.max_pool(x))
+        out = avg_out + max_out
+        return self.sigmoid(out)
+
+class SpatialAttention(nn.Module):
+    def __init__(self, kernel_size=7):
+        super(SpatialAttention, self).__init__()
+
+        self.conv1 = nn.Conv3d(2, 1, kernel_size, padding=kernel_size//2, bias=True)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        x = torch.cat([avg_out, max_out], dim=1)
+        x = self.conv1(x)
+        return self.sigmoid(x)
+     
 
 class Decoder(nn.Module):
     def __init__(self, in_channels=64, out_channels=1):
@@ -222,6 +253,9 @@ class Encoder32(nn.Module):
             nn.ReLU(inplace=True),
         )
 
+        self.ca = ChannelAttention(in_planes=64)
+        self.sa = SpatialAttention()
+
     def forward(self, x):
         """
             inputs :
@@ -235,9 +269,11 @@ class Encoder32(nn.Module):
 
         x = self.STConv1(x)                 # [16, 64, 32, 32] -> [32, 64, 32, 32]
         x = self.STConv2(x)                 # [32, 64, 32, 32] -> [32, 64, 32, 32]
-        # print("x2: {}".format(x))
-
         x = self.STConv3(x)                 # [32, 64, 32, 32] -> [64, 64, 32, 32]
+
+        x = self.ca(x) * x
+        x = self.sa(x) * x
+
         x = self.STConv4(x)                 # [64, 64, 32, 32] -> [64, 64, 32, 32]
         # print("x3: {}".format(x))
 
