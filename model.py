@@ -171,7 +171,9 @@ class FaceModel(nn.Module):
         for name in self.model_names:
             if isinstance(name, str):
                 net = getattr(self, 'net' + name)
+                print(name + " train start")
                 net.train()
+                print(name + " train ok")
 
     def set_requires_grad(self, nets, requires_grad=False):
         """Set requies_grad=Fasle for all the networks to avoid unnecessary computations

@@ -2,6 +2,7 @@ import os
 import cv2
 import threading
 import argparse
+import numpy as np
 
 root_dir = "/mnt/hdd.user/datasets/FAS/Oulu-NPU"
 proto_root_dir = "/mnt/hdd.user/datasets/FAS/Oulu-NPU/Protocols"
@@ -14,6 +15,10 @@ def parseOULUProtocol(str):
     label = str.split(',')[0]
     name = str.split(',')[1]
     return label, name
+
+def get_frames(npypath):
+    x = np.load(npypath)
+    return x.shape[0]
 
 
 def main():
@@ -68,6 +73,11 @@ def main():
                     errf.write(rppg_path + "\n")
                     flag = False
                 
+                framesnum = get_frames(npy_path)
+                if framesnum < 64:
+                    errf.write(npy_path + " frames: " + str(framesnum) + "\n")
+                    flag = False
+                
                 if flag:
                     dstf.write(npy_path + " " + rppg_path + " " + str(label) + "\n")
                 
@@ -76,6 +86,63 @@ def main():
             srcf.close()
             dstf.close()
             errf.close()
+
+    # for protocol 3 and 4
+    if protoc == "Protocol_3" or protoc == "Protocol_4":
+        protocol_dir = os.path.join(proto_root_dir, protoc)
+        # print(protocol_dir)
+        for itype, clss in enumerate(classes):
+            for idx in range(1, 7):
+                srcf_path = os.path.join(protocol_dir, clss + "_%d.txt" % idx)
+                dstf_path = os.path.join(protocol_dir, clss + "_%d_32_proto.txt" % idx)
+                errf_path = os.path.join(protocol_dir, clss + "_%d_32_err.txt" % idx)
+
+                npy_base_dir = os.path.join(root_dir, npy_dirs[itype])
+                rppg_base_dir = os.path.join(root_dir, rppg_dirs[itype])
+                # print(srcf_path)
+                # print(dstf_path)
+                
+                srcf = open(srcf_path, 'r')
+                dstf = open(dstf_path, 'w')
+                errf = open(errf_path, 'w')
+                
+                line = srcf.readline()
+                while line:
+                    label_str, videoid = parseOULUProtocol(line.strip('\n'))
+                    # print("{}, {}".format(label_str, videoid))
+                    
+                    if label_str == "+1":
+                        label = 1
+                    else:
+                        label = 0
+
+                    npy_path = os.path.join(npy_base_dir, videoid + npysfx)
+                    rppg_path = os.path.join(rppg_base_dir, videoid + rppgsfx)
+                    
+                    
+
+                    flag = True
+                    if not os.path.exists(npy_path):
+                        errf.write(npy_path + "\n")
+                        flag = False
+                    
+                    if label == 1 and not os.path.exists(rppg_path):
+                        errf.write(rppg_path + "\n")
+                        flag = False
+
+                    framesnum = get_frames(npy_path)
+                    if framesnum < 64:
+                        errf.write(npy_path + " frames: " + str(framesnum) + "\n")
+                        flag = False
+                    
+                    if flag:
+                        dstf.write(npy_path + " " + rppg_path + " " + str(label) + "\n")
+                    
+                    line = srcf.readline()
+                    
+                srcf.close()
+                dstf.close()
+                errf.close()
 
 if __name__=="__main__":
     main()

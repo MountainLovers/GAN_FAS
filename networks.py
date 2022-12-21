@@ -228,7 +228,7 @@ class Encoder32(nn.Module):
             returns :
                 x : latent-space feature [B, C:64, T:64, W:32, H:32]
         """
-
+        # print("In Encoder32 forward(), x: {}".format(x.shape))
         x = self.Conv1(x)                   # [3, 64, 32, 32] -> [16, 64, 32, 32]
         # print("x1: {}".format(x))
 

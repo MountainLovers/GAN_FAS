@@ -61,6 +61,8 @@ to test different models.
 
 ```bash
 python video2npy.py --dir=1 --threads=10 --width=32 --height=32
+
+python gen_protocols.py --protocol=Protocol_4
 ```
 
 # Experiment
