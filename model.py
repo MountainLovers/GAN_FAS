@@ -58,7 +58,7 @@ class FaceModel(nn.Module):
     def set_input(self,input):
         self.real_A = input['A'].to(self.device)
         self.real_B = input['B'].to(self.device)
-        self.label = torch.tensor(input['label']).to(self.device)
+        self.label = input['label'].to(self.device)
         self.image_path = input['A_paths']
         
         bs, self.channels, self.frames, self.height, self.width = input['A'].shape

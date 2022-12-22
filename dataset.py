@@ -126,6 +126,7 @@ class AlignedDataset(data.Dataset):
         print("dataset {} B start".format(index))
         B = B[:64]
         B = torch.tensor(B)
+        label = torch.tensor(label)
         print("dataset {} B ok".format(index))
         return {'A': A, 'B': B, 'label': label, 'A_paths': A_path, 'B_paths': B_path}
 
