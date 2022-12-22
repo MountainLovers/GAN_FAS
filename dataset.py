@@ -8,6 +8,7 @@ import numpy as np
 from numpy import float32
 import os
 import random
+from loguru import logger
 # from options import opt
 
 class AlignedDataset(data.Dataset):
@@ -31,13 +32,9 @@ class AlignedDataset(data.Dataset):
             self.A_transform = self.A_transform_train
         else:
             self.A_transform = self.A_transform_test
-        
-        print("dataset init ok")
 
     def get_file_list(self):
         "/mnt/hdd.user/datasets/FAS/Oulu-NPU/Train_npy/1_1_01_1_rgb128.npy /mnt/hdd.user/datasets/FAS/Oulu-NPU/Train_rppg/1_1_01_1.npy 1"
-        
-        print("dataset get_file_list start")
         A_path = []
         B_path = []
         label = []
@@ -53,8 +50,6 @@ class AlignedDataset(data.Dataset):
                     A_path.append(x.strip().split(' ')[0])
                     B_path.append(x.strip().split(' ')[1])
                     label.append(int(x.strip().split(' ')[2]))
-
-        print("dataset get_file_list ok")
         return (A_path,B_path,label)
 
     def A_transform_train(self, video):
@@ -113,21 +108,21 @@ class AlignedDataset(data.Dataset):
         A_path = self.AB_paths[0][index]
         B_path = self.AB_paths[1][index]
         label = self.AB_paths[2][index]
-        print("dataset {} np load A_yuv128 start".format(index))
+        # print("dataset {} np load A_yuv128 start".format(index))
         A_yuv128 = np.load(A_path)
-        print("dataset {} np load A_yuv128 ok".format(index))
+        # print("dataset {} np load A_yuv128 ok".format(index))
         if os.path.exists(B_path):
             B = np.load(B_path).astype(float32)
         else:
             B = np.zeros(A_yuv128.shape[0], dtype=float32)
-        print("dataset {} A_transform start".format(index))
+        # print("dataset {} A_transform start".format(index))
         A = self.A_transform(A_yuv128)
-        print("dataset {} A_transform ok".format(index))
-        print("dataset {} B start".format(index))
+        # print("dataset {} A_transform ok".format(index))
+        # print("dataset {} B start".format(index))
         B = B[:64]
         B = torch.tensor(B)
         label = torch.tensor(label)
-        print("dataset {} B ok".format(index))
+        # print("dataset {} B ok".format(index))
         return {'A': A, 'B': B, 'label': label, 'A_paths': A_path, 'B_paths': B_path}
 
     def __len__(self):

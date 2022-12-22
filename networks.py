@@ -4,6 +4,7 @@ from torch import nn
 from torch.nn import init
 from torch.nn.modules.utils import _triple
 import math
+from loguru import logger
 
 def init_weights(net, init_type='normal', init_gain=0.02):
     """Initialize network weights.

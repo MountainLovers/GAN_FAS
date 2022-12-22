@@ -5,6 +5,8 @@ from torch import nn
 import os
 import itertools
 from collections import OrderedDict
+from loguru import logger
+import sys
 
 class FaceModel(nn.Module):
     def __init__(self,opt,isTrain = True,input_nc = 3):
@@ -63,10 +65,10 @@ class FaceModel(nn.Module):
         
         bs, self.channels, self.frames, self.height, self.width = input['A'].shape
 
-        print("set_input batch: {}".format(bs))
+        logger.debug("set_input batch: {}".format(bs))
 
     def forward(self):
-        print("-------- FORWARD -----------")
+        logger.trace("FORWARD")
         # torch.autograd.set_detect_anomaly(True)
         # for param_tensor in self.netEncoder.state_dict(): # 字典的遍历默认是遍历 key，所以param_tensor实际上是键值
         #     print(param_tensor,'\t',self.netEncoder.state_dict()[param_tensor])
@@ -95,24 +97,26 @@ class FaceModel(nn.Module):
         self.loss_D_real = self.criterionGan(pred_real, True)
 
         self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5 *self.w_gan
-        print("loss_D_fake: {}, loss_D_real: {}, loss_D: {}".format(self.loss_D_fake, self.loss_D_real, self.loss_D))
+        logger.debug("loss_D_fake: {}, loss_D_real: {}, loss_D: {}".format(self.loss_D_fake, self.loss_D_real, self.loss_D))
         self.loss_D.backward()
 
     def backward_G(self):
+        logger.debug("self.fake_B shape: {}".format(self.fake_B.shape))
         fake_B_repeated = torch.repeat_interleave(self.fake_B, self.width*self.height, dim=1).view(-1, 1, self.frames, self.height, self.width)        # [B, 1, frames] -> [B, 1, frames, 128, 128], repeat to cat
+        logger.debug("fake_B_repeated shape: {}".format(fake_B_repeated.shape))
         fake_AB = torch.cat((self.real_A, fake_B_repeated), 1)
         pred_fake = self.netSigDiscriminator(fake_AB.detach())
         self.loss_G_GAN = self.criterionGan(pred_fake, True)
         self.loss_G_NP = self.criterionNP(self.fake_B, self.real_B)
         self.loss_G = self.loss_G_NP*self.w_NP + self.loss_G_GAN *self.w_gan
-        print("loss_G_GAN: {}, loss_G_NP: {}, loss_G: {}".format(self.loss_G_GAN, self.loss_G_NP, self.loss_G))
+        logger.debug("loss_G_GAN: {}, loss_G_NP: {}, loss_G: {}".format(self.loss_G_GAN, self.loss_G_NP, self.loss_G))
         self.loss_G.backward()
 
 
     def backward_C(self):
         output = self.output
         self.loss_C = (2* self.criterionCls[0](output,self.label)+  self.criterionCls[1](output,self.label))*self.w_cls #self.criterionCls[0](output,self.label)+  self.criterionCls[1](cls_feat,self.label)
-        print("loss_C: {}".format(self.loss_C))
+        logger.debug("loss_C: {}".format(self.loss_C))
         self.loss_C.backward()
 
     def optimize_parameters(self):
@@ -120,26 +124,28 @@ class FaceModel(nn.Module):
         
         if self.model =="model3":
             # update D
-            print("-------- UPDATE D -------------")
+            logger.trace("UPDATE D")
             self.set_requires_grad(self.netSigDiscriminator, True) 
             self.optimizer_discriminate.zero_grad()
             # with torch.autograd.detect_anomaly():
             #     self.backward_D()
-            print("-------- UPDATE D before backward_D -------------")
+            logger.trace("UPDATE D backward_D start")
             self.backward_D()
-            print("-------- UPDATE D backward_D done -------------")
+            logger.trace("UPDATE D backward_D ok")
             # for name, param in self.netSigDiscriminator.named_parameters():
             #     print(name, torch.isnan(param.grad).all())
             self.optimizer_discriminate.step()
             # self.optimizer_discriminate.zero_grad()
         if self.model =="model3" or self.model =="model2":
             # update G_depth
-            print("-------- UPDATE G -------------")
+            logger.trace("UPDATE G")
             self.set_requires_grad(self.netSigDiscriminator, False) 
             self.optimizer_sig.zero_grad()
             # with torch.autograd.detect_anomaly():
             #     self.backward_G()
+            logger.trace("UPDATE G backward_G start")
             self.backward_G() 
+            logger.trace("UPDATE G backward_G ok")
             # for name, param in self.netEncoder.named_parameters():
             #     print(name, torch.isnan(param.grad).all())
             # for name, param in self.netSigDecoder.named_parameters():
@@ -147,7 +153,7 @@ class FaceModel(nn.Module):
             self.optimizer_sig.step()
             # self.optimizer_sig.zero_grad()
         if self.model =="model3" or self.model =="model2" or self.model =="model1":
-            print("-------- UPDATE C -------------")
+            logger.trace("UPDATE C")
             self.forward()
             # update C
             self.optimizer_cls.zero_grad()
@@ -171,9 +177,9 @@ class FaceModel(nn.Module):
         for name in self.model_names:
             if isinstance(name, str):
                 net = getattr(self, 'net' + name)
-                print(name + " train start")
+                logger.trace(name + " train start")
                 net.train()
-                print(name + " train ok")
+                logger.trace(name + " train ok")
 
     def set_requires_grad(self, nets, requires_grad=False):
         """Set requies_grad=Fasle for all the networks to avoid unnecessary computations
@@ -219,7 +225,7 @@ class FaceModel(nn.Module):
                 net = getattr(self, 'net' + name)
                 if isinstance(net, torch.nn.DataParallel):
                     net = net.module
-                print('loading the model from %s' % load_path)
+                logger.info('loading the model from %s' % load_path)
                 # if you are using PyTorch newer than 0.4 (e.g., built from
                 # GitHub source), you can remove str() on self.device
                 state_dict = torch.load(load_path, map_location=str(self.device))
