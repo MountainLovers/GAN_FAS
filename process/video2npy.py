@@ -117,12 +117,11 @@ def show_img(image, idx=-1):
     plt.figure(1)
     if idx == -1:
         for img in image:
-             plt.imshow(img)
+            plt.imshow(img)
+            plt.show()
     else:
         plt.imshow(image[idx])
-
-    plt.show()
-
+        plt.show()
 
 def process(videospath, dat_dir, npy_dir, typ, w, h):
     totalcnt = 0
