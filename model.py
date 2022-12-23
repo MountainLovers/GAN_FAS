@@ -65,7 +65,7 @@ class FaceModel(nn.Module):
         
         self.bs, self.channels, self.frames, self.height, self.width = input['A'].shape
 
-        logger.debug("set_input batch: {}".format(self.bs))
+        # logger.debug("set_input batch: {}".format(self.bs))
 
     def forward(self):
         logger.trace("FORWARD")
@@ -103,25 +103,23 @@ class FaceModel(nn.Module):
         self.loss_D.backward()
 
     def backward_G(self):
-        logger.debug("self.fake_B shape: {}".format(self.fake_B.shape))
+        # logger.debug("self.fake_B shape: {}".format(self.fake_B.shape))
         # fake_B_repeated = torch.repeat_interleave(self.fake_B, self.width*self.height, dim=1).view(-1, 1, self.frames, self.height, self.width)        # [B, 1, frames] -> [B, 1, frames, 128, 128], repeat to cat
         fake_B_repeated = self.fake_B.reshape(self.bs, 1, self.frames, 1, 1).expand(self.bs, 1, self.frames, self.height, self.width)
-        logger.debug("fake_B_repeated shape: {}".format(fake_B_repeated.shape))
+        # logger.debug("fake_B_repeated shape: {}".format(fake_B_repeated.shape))
         fake_AB = torch.cat((self.real_A, fake_B_repeated), 1)
-        logger.debug("fake_AB shape: {}".format(fake_AB.shape))
-        logger.debug("netSigDiscriminator start")
+        # logger.debug("fake_AB shape: {}".format(fake_AB.shape))
+        # logger.debug("netSigDiscriminator start")
         pred_fake = self.netSigDiscriminator(fake_AB.detach())
-        logger.debug("netSigDiscriminator ok")
+        # logger.debug("netSigDiscriminator ok")
         self.loss_G_GAN = self.criterionGan(pred_fake, True)
-        logger.debug("loss_G_GAN ok")
+        # logger.debug("loss_G_GAN ok")
         self.loss_G_NP = self.criterionNP(self.fake_B, self.real_B)
-        logger.debug("loss_G_NP ok")
+        # logger.debug("loss_G_NP ok")
         self.loss_G = self.loss_G_NP*self.w_NP + self.loss_G_GAN *self.w_gan
-        logger.debug("loss_G ok")
+        # logger.debug("loss_G ok")
         # logger.debug("loss_G_GAN: {}, loss_G_NP: {}, loss_G: {}".format(self.loss_G_GAN.item(), self.loss_G_NP.item(), self.loss_G.item()))
-        logger.debug("loss_G_GAN: {}".format(self.loss_G_GAN.item()))
-        logger.debug("loss_G_NP: {}".format(self.loss_G_NP.item()))
-        logger.debug("loss_G: {}".format(self.loss_G.item()))
+        logger.debug("loss_G_GAN: {}, loss_G_NP: {}, loss_G: {}".format(self.loss_G_GAN.item(), self.loss_G_NP.item(), self.loss_G.item()))
         logger.debug("loss_G backward start")
         self.loss_G.backward()
         logger.debug("loss_G backward ok")
