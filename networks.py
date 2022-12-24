@@ -107,12 +107,12 @@ class Decoder(nn.Module):
         self.DConv1 = nn.Sequential(
             nn.ConvTranspose3d(in_channels, in_channels//2, kernel_size=(4,1,1), stride=(2,1,1), padding=(1,0,0), bias=False),
             nn.InstanceNorm3d(in_channels//2, affine=True, track_running_stats=True),
-            nn.LeakyReLU(inplace=True)
+            nn.ReLU(inplace=True)
         )
         self.DConv2 = nn.Sequential(
             nn.ConvTranspose3d(in_channels//2, in_channels//4, kernel_size=(4,1,1), stride=(2,1,1), padding=(1,0,0), bias=False),
             nn.InstanceNorm3d(in_channels//4, affine=True, track_running_stats=True),
-            nn.LeakyReLU(inplace=True)
+            nn.ReLU(inplace=True)
         )
         self.Conv = nn.Conv3d(in_channels//4, out_channels, [1,1,1],stride=1, padding=0)
         self.poolspa = nn.AdaptiveAvgPool3d((frames,1,1))
@@ -212,41 +212,41 @@ class Encoder32(nn.Module):
         self.Conv1 = nn.Sequential(
             nn.Conv3d(3, 16, [1,5,5], stride=1, padding=[0,2,2]),
             nn.BatchNorm3d(16),
-            nn.LeakyReLU(inplace=True),
+            nn.ReLU(inplace=True),
         )
 
         self.Conv2 = nn.Sequential(
             nn.Conv3d(16, 32, kernel_size=(3,4,4), stride=(1,2,2), padding=(1,1,1), bias=False),
             nn.BatchNorm3d(32),
-            nn.LeakyReLU(inplace=True),
+            nn.ReLU(inplace=True),
         )
 
         self.Conv3 = nn.Sequential(
             nn.Conv3d(32, 64, kernel_size=(4,4,4), stride=(2,2,2), padding=(1,1,1), bias=False),
             nn.BatchNorm3d(64),
-            nn.LeakyReLU(inplace=True),
+            nn.ReLU(inplace=True),
         )
 
         self.Conv4 = nn.Sequential(
             nn.Conv3d(64, 128, kernel_size=(4,3,3), stride=(2,1,1), padding=(1,1,1), bias=False),
             nn.BatchNorm3d(128),
-            nn.LeakyReLU(inplace=True),
+            nn.ReLU(inplace=True),
         )
 
         self.STConv1 = nn.Sequential(
             SpatioTemporalConv(128, 256, [3, 3, 3], stride=1, padding=1),
             nn.BatchNorm3d(256),
-            nn.LeakyReLU(inplace=True),
+            nn.ReLU(inplace=True),
         )
         self.STConv2 = nn.Sequential(
             SpatioTemporalConv(256, 512, [3, 3, 3], stride=1, padding=1),
             nn.BatchNorm3d(512),
-            nn.LeakyReLU(inplace=True),
+            nn.ReLU(inplace=True),
         )
         self.STConv3 = nn.Sequential(
             SpatioTemporalConv(512, 512, [3, 3, 3], stride=1, padding=1),
             nn.BatchNorm3d(512),
-            nn.LeakyReLU(inplace=True),
+            nn.ReLU(inplace=True),
         )
         # self.STConv4 = nn.Sequential(
         #     SpatioTemporalConv(64, 64, [3, 3, 3], stride=1, padding=1),
