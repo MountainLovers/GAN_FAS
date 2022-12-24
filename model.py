@@ -28,7 +28,7 @@ class FaceModel(nn.Module):
         self.netSigDiscriminator = networks.init_net(networks.Discriminator(),gpu_ids=self.gpu_ids)
 
         self.model_names = ["Encoder","SigDecoder","SigDiscriminator","Classifier"]
-        self.visual_names = ["real_A","real_B","fake_B"]
+        self.sig_names = ["real_B","fake_B"]
         self.loss_names = ['G_GAN', 'G_NP', 'D_real', 'D_fake','C', 'D', 'G']
 
         self.channels = 3
@@ -250,12 +250,13 @@ class FaceModel(nn.Module):
 
                 net.load_state_dict(state_dict)
 
-    def get_current_visuals(self):
+    def get_current_sigs(self):
         """Return visualization images. train.py will display these images with visdom, and save the images to a HTML"""
         visual_ret = OrderedDict()
-        for name in self.visual_names:
+        for name in self.sig_names:
             if isinstance(name, str):
                 visual_ret[name] = getattr(self, name)
+                visual_ret[name] = visual_ret[name].clone().detach().cpu().numpy()
         return visual_ret
 
     def get_current_losses(self):

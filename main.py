@@ -13,6 +13,7 @@ from loguru import logger
 from tensorboardX import SummaryWriter
 from torch.utils.data.sampler import  WeightedRandomSampler
 from test import eval_model
+import matplotlib.pyplot as plt
 
 file_name = os.path.join(opt.checkpoints_dir, opt.name,"log")
 logging.basicConfig(format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s',
@@ -79,7 +80,7 @@ if __name__ == '__main__':
                 pad_meter_train.get_eer_and_thr()
                 pad_meter_train.get_hter_apcer_etal_at_thr(pad_meter_train.threshold)
                 pad_meter_train.get_accuracy(pad_meter_train.threshold)
-                # ret = model.get_current_visuals()
+                ret = model.get_current_sigs()
                 img_save_dir = os.path.join(opt.checkpoints_dir, opt.name, "res")
                 if not os.path.exists(img_save_dir):
                     os.makedirs(img_save_dir)
@@ -89,6 +90,25 @@ if __name__ == '__main__':
                 logger.info("batch {}: {}".format(i, model.get_current_losses()))
                 logger.info('batch {}: HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
                     i, pad_meter=pad_meter_train))
+
+                # save sigal figure
+                plt.figure(dpi=300)
+
+                for i in range(ret['fake_B'].shape[0]):
+                    plt.subplot(ret['fake_B'].shape[0], 1, i+1)
+                    plt.plot(ret['fake_B'][i])
+                # plt.savefig("%s/epoch_%d_fake.png" % (img_save_dir, e))
+
+                for i in range(ret['real_B'].shape[0]):
+                    plt.subplot(ret['real_B'].shape[0], 1, i+1)
+                    plt.plot(ret['real_B'][i])
+
+                plt.legend(labels=["fake","real"],loc="lower right",fontsize=6)
+                plt.savefig("%s/epoch_%d.png" % (img_save_dir, e))
+
+                plt.close()
+                logger.info("epoch {} batch {}: save figs ok".format(e, i))
+
                 # vutils.save_image(ret['fake_B'], "%s/epoch_%d_fake.png" % (img_save_dir, e), normalize=True)
                 # vutils.save_image(ret['real_B'], "%s/epoch_%d_real.png" % (img_save_dir, e), normalize=True)
 
