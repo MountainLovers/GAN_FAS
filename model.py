@@ -76,11 +76,11 @@ class FaceModel(nn.Module):
         # print("In forward(), real_A: {}".format(self.real_A.shape))
         # print("real_A: {}".format(self.real_A))
         self.lantent = self.netEncoder(self.real_A)
-        # print("In forward(), lantent: {}".format(self.lantent.shape))
+        # logger.info("In forward(), lantent: {}".format(self.lantent.shape))
         # print("lantent: {}".format(self.lantent))
         self.fake_B = self.netSigDecoder(self.lantent)
         # print("fake_B: {}".format(self.fake_B))
-        # print("In forward(), fake_B: {}".format(self.fake_B.shape))
+        # logger.info("In forward(), fake_B: {}".format(self.fake_B.shape))
         self.output = self.netClassifier(self.lantent)
 
 
