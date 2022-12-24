@@ -101,23 +101,37 @@ class SpatioTemporalConv(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, in_channels=64, out_channels=1):
+    def __init__(self, in_channels=512, out_channels=1):
         super(Decoder, self).__init__()
-        frames = 64
-        self.ConvBlock = nn.Conv3d(in_channels, out_channels, [1,1,1],stride=1, padding=0)
+        frames = 16
+        self.DConv1 = nn.Sequential(
+            nn.ConvTranspose3d(in_channels, in_channels//2, kernel_size=(4,1,1), stride=(2,1,1), padding=(1,0,0), bias=False),
+            nn.InstanceNorm3d(in_channels//2, affine=True, track_running_stats=True),
+            nn.ReLU(inplace=True)
+        )
+        self.DConv2 = nn.Sequential(
+            nn.ConvTranspose3d(in_channels//2, in_channels//4, kernel_size=(4,1,1), stride=(2,1,1), padding=(1,0,0), bias=False),
+            nn.InstanceNorm3d(in_channels//4, affine=True, track_running_stats=True),
+            nn.ReLU(inplace=True)
+        )
+        self.Conv = nn.Conv3d(in_channels//4, out_channels, [1,1,1],stride=1, padding=0)
         self.poolspa = nn.AdaptiveAvgPool3d((frames,1,1))
 
 
     def forward(self, x):
         """
             inputs :
-                x : latent-space feature [B, C:64, T:64, W:32, H:32]
+                x : latent-space feature [B, C:512, T:16, W:8, H:8]
             returns :
                 x : rppg signal [B, T:64]
         """
-        x = self.poolspa(x)                     # [64, 64, 32, 32] -> [64, 64, 1, 1]
-        x = self.ConvBlock(x).squeeze(1).squeeze(-1).squeeze(-1)    # [64, 64, 1, 1] -> [1, 64, 1, 1] -> [ , 64]
-     
+        x = self.poolspa(x)                     # [512, 16, 8, 8] -> [512, 16, 1, 1]
+
+        x = self.DConv1(x)                      # [512, 16, 1, 1] -> [256, 32, 1, 1]
+        x = self.DConv2(x)                      # [256, 32, 1, 1] -> [128, 64, 1, 1]
+
+        x = self.Conv(x).squeeze(1).squeeze(-1).squeeze(-1)    # [128, 64, 1, 1] -> [1, 64, 1, 1] -> [ , 64]
+
         return x
 
 class Encoder128(nn.Module):
@@ -201,44 +215,64 @@ class Encoder32(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-        self.STConv1 = nn.Sequential(
-            SpatioTemporalConv(16, 32, [3, 3, 3], stride=1, padding=1),
+        self.Conv2 = nn.Sequential(
+            nn.Conv3d(16, 32, kernel_size=(3,4,4), stride=(1,2,2), padding=(1,1,1), bias=False),
             nn.BatchNorm3d(32),
+            nn.ReLU(inplace=True),
+        )
+
+        self.Conv3 = nn.Sequential(
+            nn.Conv3d(32, 64, kernel_size=(4,4,4), stride=(2,2,2), padding=(1,1,1), bias=False),
+            nn.BatchNorm3d(64),
+            nn.ReLU(inplace=True),
+        )
+
+        self.Conv4 = nn.Sequential(
+            nn.Conv3d(64, 128, kernel_size=(4,3,3), stride=(2,1,1), padding=(1,1,1), bias=False),
+            nn.BatchNorm3d(128),
+            nn.ReLU(inplace=True),
+        )
+
+        self.STConv1 = nn.Sequential(
+            SpatioTemporalConv(128, 256, [3, 3, 3], stride=1, padding=1),
+            nn.BatchNorm3d(256),
             nn.ReLU(inplace=True),
         )
         self.STConv2 = nn.Sequential(
-            SpatioTemporalConv(32, 32, [3, 3, 3], stride=1, padding=1),
-            nn.BatchNorm3d(32),
+            SpatioTemporalConv(256, 512, [3, 3, 3], stride=1, padding=1),
+            nn.BatchNorm3d(512),
             nn.ReLU(inplace=True),
         )
         self.STConv3 = nn.Sequential(
-            SpatioTemporalConv(32, 64, [3, 3, 3], stride=1, padding=1),
-            nn.BatchNorm3d(64),
+            SpatioTemporalConv(512, 512, [3, 3, 3], stride=1, padding=1),
+            nn.BatchNorm3d(512),
             nn.ReLU(inplace=True),
         )
-        self.STConv4 = nn.Sequential(
-            SpatioTemporalConv(64, 64, [3, 3, 3], stride=1, padding=1),
-            nn.BatchNorm3d(64),
-            nn.ReLU(inplace=True),
-        )
+        # self.STConv4 = nn.Sequential(
+        #     SpatioTemporalConv(64, 64, [3, 3, 3], stride=1, padding=1),
+        #     nn.BatchNorm3d(64),
+        #     nn.ReLU(inplace=True),
+        # )
 
     def forward(self, x):
         """
             inputs :
                 x : input feature [B, C:3, T:64, W:32, H:32]
             returns :
-                x : latent-space feature [B, C:64, T:64, W:32, H:32]
+                x : latent-space feature [B, C:512, T:16, W:8, H:8]
         """
         # print("In Encoder32 forward(), x: {}".format(x.shape))
         x = self.Conv1(x)                   # [3, 64, 32, 32] -> [16, 64, 32, 32]
         # print("x1: {}".format(x))
 
-        x = self.STConv1(x)                 # [16, 64, 32, 32] -> [32, 64, 32, 32]
-        x = self.STConv2(x)                 # [32, 64, 32, 32] -> [32, 64, 32, 32]
-        # print("x2: {}".format(x))
+        x = self.Conv2(x)                   # [16, 64, 32, 32] -> [32, 64, 16, 16]
+        x = self.Conv3(x)                   # [32, 64, 16, 16] -> [64, 32, 8, 8]
+        x = self.Conv4(x)                   # [64, 32, 8, 8] -> [128, 16, 8, 8]
 
-        x = self.STConv3(x)                 # [32, 64, 32, 32] -> [64, 64, 32, 32]
-        x = self.STConv4(x)                 # [64, 64, 32, 32] -> [64, 64, 32, 32]
+        x = self.STConv1(x)                 # [128, 16, 8, 8] -> [256, 16, 8, 8]
+        x = self.STConv2(x)                 # [256, 16, 8, 8] -> [512, 16, 8, 8]
+        x = self.STConv3(x)                 # [512, 16, 8, 8] -> [512, 16, 8, 8]
+        # x = self.STConv4(x)                 # [64, 64, 32, 32] -> [64, 64, 32, 32]
         # print("x3: {}".format(x))
 
         return x
@@ -247,36 +281,32 @@ class Classifier(nn.Module):
     def __init__(self, in_channels=128):
         super(Classifier, self).__init__()
         self.conv = nn.Sequential(
-            nn.Conv3d(64, 64, [3,3,3], stride=1, padding=1),
-            nn.BatchNorm3d(64),
+            nn.Conv3d(512, 1024, [3,3,3], stride=1, padding=1),
+            nn.BatchNorm3d(1024),
             nn.ReLU(inplace=True),
-            nn.MaxPool3d(2),
-
-            nn.Conv3d(64, 128, [3,3,3], stride=1, padding=1),
-            nn.BatchNorm3d(128),
-            nn.ReLU(inplace=True),
-            nn.MaxPool3d(2),
-
-            nn.Conv3d(128, 256, [3,3,3], stride=1, padding=1),
-            nn.BatchNorm3d(256),
-            nn.ReLU(inplace=True),
-            nn.MaxPool3d(2),
-
-            nn.Conv3d(256, 512, [3,3,3], stride=1, padding=1),
-            nn.BatchNorm3d(512),
-            nn.ReLU(inplace=True),
-            )
+        )
 
         self.avgpooling = nn.AdaptiveAvgPool3d((1, 1, 1))
 
-        self.classifier = nn.Sequential(nn.Linear(512, 128),
-                                    nn.BatchNorm1d(128),
-                                    nn.Dropout(p=0.3),
-                                    nn.ReLU(),
-                                    nn.Linear(128, 2))
+        self.classifier = nn.Sequential(nn.Linear(1024, 512),
+                                        nn.BatchNorm1d(512),
+                                        nn.Dropout(p=0.3),
+                                        nn.ReLU(),
+                                        nn.Linear(512, 128),
+                                        nn.BatchNorm1d(128),
+                                        nn.Dropout(p=0.3),
+                                        nn.ReLU(),
+                                        nn.Linear(128, 2)
+                                        )
                     
 
     def forward(self, x):
+        """
+            inputs :
+                x : latent-space feature [B, C:512, T:16, W:8, H:8]
+            returns :
+                pred
+        """
         # print("input: {}".format(x.shape))
         # print("!!!!!!!!!!!!!!!!!!!!!!!!!! 1 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         x = self.conv(x)
@@ -331,3 +361,7 @@ class Discriminator(nn.Module):
         x = x.reshape(b, -1)            # [B, 64, 2, 2, 2] -> [B, 512]
         output = self.FC(x)
         return output
+
+
+
+
