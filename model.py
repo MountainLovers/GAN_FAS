@@ -29,7 +29,7 @@ class FaceModel(nn.Module):
 
         self.model_names = ["Encoder","SigDecoder","SigDiscriminator","Classifier"]
         self.visual_names = ["real_A","real_B","fake_B"]
-        self.loss_names = ['G_GAN', 'G_NP', 'D_real', 'D_fake','C']
+        self.loss_names = ['G_GAN', 'G_NP', 'D_real', 'D_fake','C', 'D', 'G']
 
         self.channels = 3
         self.frames = 64

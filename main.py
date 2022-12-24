@@ -68,12 +68,13 @@ if __name__ == '__main__':
             pad_meter_train.update(model.label.cpu().data.numpy(),
                              class_output.cpu().data.numpy())
 
-            writer.add_scalars('cls_loss', {'closs': model.get_current_losses()['C']}, i+ len(train_data_loader) *e)
+            writer.add_scalars('C', {'C': model.get_current_losses()['C']}, i+ len(train_data_loader) *e)
             writer.add_scalars('G_GAN', {'G_GAN_loss': model.get_current_losses()['G_GAN']}, i+ len(train_data_loader) *e)
             writer.add_scalars('G_NP', {'G_NP_loss': model.get_current_losses()['G_NP']}, i+ len(train_data_loader) *e)
             writer.add_scalars('D_real', {'D_real_loss': model.get_current_losses()['D_real']}, i+ len(train_data_loader) *e)
             writer.add_scalars('D_fake', {'D_fake_loss': model.get_current_losses()['D_fake']}, i+ len(train_data_loader) *e)
-
+            writer.add_scalars('D', {'D': model.get_current_losses()['D']}, i+ len(train_data_loader) *e)
+            writer.add_scalars('G', {'G': model.get_current_losses()['G']}, i+ len(train_data_loader) *e)
             if i %100 ==0:
                 pad_meter_train.get_eer_and_thr()
                 pad_meter_train.get_hter_apcer_etal_at_thr(pad_meter_train.threshold)
