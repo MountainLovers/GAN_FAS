@@ -107,12 +107,12 @@ class Decoder(nn.Module):
         self.DConv1 = nn.Sequential(
             nn.ConvTranspose3d(in_channels, in_channels//2, kernel_size=(4,1,1), stride=(2,1,1), padding=(1,0,0), bias=False),
             nn.InstanceNorm3d(in_channels//2, affine=True, track_running_stats=True),
-            nn.ReLU(inplace=True)
+            nn.LeakyReLU(inplace=True)
         )
         self.DConv2 = nn.Sequential(
             nn.ConvTranspose3d(in_channels//2, in_channels//4, kernel_size=(4,1,1), stride=(2,1,1), padding=(1,0,0), bias=False),
             nn.InstanceNorm3d(in_channels//4, affine=True, track_running_stats=True),
-            nn.ReLU(inplace=True)
+            nn.LeakyReLU(inplace=True)
         )
         self.Conv = nn.Conv3d(in_channels//4, out_channels, [1,1,1],stride=1, padding=0)
         self.poolspa = nn.AdaptiveAvgPool3d((frames,1,1))
@@ -212,41 +212,41 @@ class Encoder32(nn.Module):
         self.Conv1 = nn.Sequential(
             nn.Conv3d(3, 16, [1,5,5], stride=1, padding=[0,2,2]),
             nn.BatchNorm3d(16),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
         )
 
         self.Conv2 = nn.Sequential(
             nn.Conv3d(16, 32, kernel_size=(3,4,4), stride=(1,2,2), padding=(1,1,1), bias=False),
             nn.BatchNorm3d(32),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
         )
 
         self.Conv3 = nn.Sequential(
             nn.Conv3d(32, 64, kernel_size=(4,4,4), stride=(2,2,2), padding=(1,1,1), bias=False),
             nn.BatchNorm3d(64),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
         )
 
         self.Conv4 = nn.Sequential(
             nn.Conv3d(64, 128, kernel_size=(4,3,3), stride=(2,1,1), padding=(1,1,1), bias=False),
             nn.BatchNorm3d(128),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
         )
 
         self.STConv1 = nn.Sequential(
             SpatioTemporalConv(128, 256, [3, 3, 3], stride=1, padding=1),
             nn.BatchNorm3d(256),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
         )
         self.STConv2 = nn.Sequential(
             SpatioTemporalConv(256, 512, [3, 3, 3], stride=1, padding=1),
             nn.BatchNorm3d(512),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
         )
         self.STConv3 = nn.Sequential(
             SpatioTemporalConv(512, 512, [3, 3, 3], stride=1, padding=1),
             nn.BatchNorm3d(512),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True),
         )
         # self.STConv4 = nn.Sequential(
         #     SpatioTemporalConv(64, 64, [3, 3, 3], stride=1, padding=1),
@@ -328,16 +328,21 @@ class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator,self).__init__()
 
+        # self.Conv = nn.Sequential(
+        #     nn.Conv3d(4, 16, [1,5,5], stride=1, padding=[0,2,2]),
+        #     nn.BatchNorm3d(16),
+        #     nn.LeakyReLU(0.2, inplace=True),
+        #     nn.Conv3d(16, 32, [1,5,5], stride=1, padding=[0,2,2]),
+        #     nn.BatchNorm3d(32),
+        #     nn.LeakyReLU(0.2, inplace=True),
+        #     nn.Conv3d(32, 64, [3,3,3], stride=1, padding=1),
+        #     nn.BatchNorm3d(64),
+        #     nn.Conv3d(64, 64, [3,3,3], stride=1, padding=1),
+        #     nn.BatchNorm3d(64),
+        #     nn.LeakyReLU(0.2, inplace=True),
+        # )
         self.Conv = nn.Sequential(
-            nn.Conv3d(4, 16, [1,5,5], stride=1, padding=[0,2,2]),
-            nn.BatchNorm3d(16),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv3d(16, 32, [1,5,5], stride=1, padding=[0,2,2]),
-            nn.BatchNorm3d(32),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv3d(32, 64, [3,3,3], stride=1, padding=1),
-            nn.BatchNorm3d(64),
-            nn.Conv3d(64, 64, [3,3,3], stride=1, padding=1),
+            nn.Conv3d(4, 64, [1,5,5], stride=1, padding=[0,2,2]),
             nn.BatchNorm3d(64),
             nn.LeakyReLU(0.2, inplace=True),
         )
@@ -347,9 +352,7 @@ class Discriminator(nn.Module):
         self.FC = nn.Sequential(
             nn.Linear(512, 128),
             nn.ReLU(),
-            nn.Linear(128, 32),
-            nn.ReLU(),
-            nn.Linear(32, 1),
+            nn.Linear(128, 1),
             nn.Sigmoid()
         )
         
@@ -361,7 +364,3 @@ class Discriminator(nn.Module):
         x = x.reshape(b, -1)            # [B, 64, 2, 2, 2] -> [B, 512]
         output = self.FC(x)
         return output
-
-
-
-
