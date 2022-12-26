@@ -14,6 +14,8 @@ from tensorboardX import SummaryWriter
 from torch.utils.data.sampler import  WeightedRandomSampler
 from test import eval_model
 import matplotlib.pyplot as plt
+import numpy as np
+import random
 
 file_name = os.path.join(opt.checkpoints_dir, opt.name,"log")
 logging.basicConfig(format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s',
@@ -29,7 +31,22 @@ logger.add(sys.stdout, level="INFO")
 logger.add("checkpoints/%s/debug_%s_{time}.log"%(opt.name, opt.name), rotation="500 MB", level="TRACE")
 logger.add("checkpoints/%s/info_%s_{time}.log"%(opt.name, opt.name), rotation="500 MB", level="INFO")
 
+def setup_seed(seed):
+     torch.manual_seed(seed)
+     torch.cuda.manual_seed_all(seed)
+     np.random.seed(seed)
+     random.seed(seed)
+     torch.backends.cudnn.deterministic = True
+     torch.backends.cudnn.benchmark = False
+
+
 if __name__ == '__main__':
+    # 设置随机数种子
+    seed = opt.seed
+    if seed != -1:
+        setup_seed(seed)
+    else:
+        torch.backends.cudnn.benchmark = True
     best_res = 101
     train_batch_size = opt.batch_size
     test_batch_size = opt.batch_size

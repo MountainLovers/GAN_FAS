@@ -19,7 +19,7 @@ class FaceModel(nn.Module):
         self.gpu_ids = opt.gpu_ids
         self.device = torch.device('cuda:{}'.format(self.gpu_ids[0])) if self.gpu_ids else torch.device(
             'cpu')  # get device name: CPU or GPU
-        torch.backends.cudnn.benchmark = True
+        # torch.backends.cudnn.benchmark = True
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
         self.isTrain = isTrain
         self.netEncoder = networks.init_net(networks.Encoder32(),gpu_ids=self.gpu_ids)
