@@ -299,15 +299,15 @@ class Discriminator(nn.Module):
         super(Discriminator,self).__init__()
 
         self.Conv = nn.Sequential(
-            nn.Conv3d(4, 16, [1,5,5], stride=1, padding=[0,2,2]),
+            torch.nn.utils.parametrizations.spectral_norm(nn.Conv3d(4, 16, [1,5,5], stride=1, padding=[0,2,2])),
             nn.BatchNorm3d(16),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv3d(16, 32, [1,5,5], stride=1, padding=[0,2,2]),
+            torch.nn.utils.parametrizations.spectral_norm(nn.Conv3d(16, 32, [1,5,5], stride=1, padding=[0,2,2])),
             nn.BatchNorm3d(32),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv3d(32, 64, [3,3,3], stride=1, padding=1),
+            torch.nn.utils.parametrizations.spectral_norm(nn.Conv3d(32, 64, [3,3,3], stride=1, padding=1)),
             nn.BatchNorm3d(64),
-            nn.Conv3d(64, 64, [3,3,3], stride=1, padding=1),
+            torch.nn.utils.parametrizations.spectral_norm(nn.Conv3d(64, 64, [3,3,3], stride=1, padding=1)),
             nn.BatchNorm3d(64),
             nn.LeakyReLU(0.2, inplace=True),
         )
@@ -315,11 +315,11 @@ class Discriminator(nn.Module):
         self.GAP = nn.AdaptiveAvgPool3d((2, 2, 2))
 
         self.FC = nn.Sequential(
-            nn.Linear(512, 128),
+            torch.nn.utils.parametrizations.spectral_norm(nn.Linear(512, 128)),
             nn.ReLU(),
-            nn.Linear(128, 32),
+            torch.nn.utils.parametrizations.spectral_norm(nn.Linear(128, 32)),
             nn.ReLU(),
-            nn.Linear(32, 1),
+            torch.nn.utils.parametrizations.spectral_norm(nn.Linear(32, 1)),
             nn.Sigmoid()
         )
         
