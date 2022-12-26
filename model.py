@@ -48,10 +48,10 @@ class FaceModel(nn.Module):
             self.criterionCls = [torch.nn.CrossEntropyLoss(),losses.FocalLoss()]
             # net G/
             self.optimizer_sig = torch.optim.Adam(itertools.chain(self.netEncoder.parameters(),
-                                                                    self.netSigDecoder.parameters()), lr=opt.lr,betas=(opt.beta1, 0.999))
+                                                                    self.netSigDecoder.parameters()), lr=0.00003,betas=(opt.beta1, 0.999))
 
             # net D/
-            self.optimizer_discriminate = torch.optim.Adam(self.netSigDiscriminator.parameters(),lr=opt.lr, betas=(opt.beta1, 0.999))
+            self.optimizer_discriminate = torch.optim.Adam(self.netSigDiscriminator.parameters(),lr=0.0001, betas=(opt.beta1, 0.999))
 
             # net cls 
             self.optimizer_cls = torch.optim.Adam(itertools.chain(self.netEncoder.parameters(),
