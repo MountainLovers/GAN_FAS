@@ -52,14 +52,14 @@ class FaceModel(nn.Module):
             self.criterionCls = [torch.nn.CrossEntropyLoss(),losses.FocalLoss()]
             # net G/
             self.optimizer_sig = torch.optim.Adam(itertools.chain(self.netEncoder.parameters(),
-                                                                    self.netSigDecoder.parameters()), lr=opt.lr,betas=(opt.beta1, 0.999))
+                                                                    self.netSigDecoder.parameters()), lr=opt.lr_G,betas=(opt.beta1, 0.999))
 
             # net D/
-            self.optimizer_discriminate = torch.optim.Adam(self.netSigDiscriminator.parameters(),lr=opt.lr, betas=(opt.beta1, 0.999))
+            self.optimizer_discriminate = torch.optim.Adam(self.netSigDiscriminator.parameters(),lr=opt.lr_D, betas=(opt.beta1, 0.999))
 
             # net cls 
             self.optimizer_cls = torch.optim.Adam(itertools.chain(self.netEncoder.parameters(),
-                                                                    self.netClassifier.parameters()),lr=opt.lr, betas=(opt.beta1, 0.999),weight_decay=0.01)
+                                                                    self.netClassifier.parameters()),lr=opt.lr_C, betas=(opt.beta1, 0.999),weight_decay=0.01)
 
     def set_input(self,input):
         self.real_A = input['A'].to(self.device)

@@ -22,7 +22,9 @@ parser.add_argument('--w_NP', type=float, default=5, help='weight of NP loss')
 parser.add_argument('--w_gan', type=int, default=1, help='weight of gan loss')
 
 # training parameters
-parser.add_argument('--lr', type=float, default=0.00003, help='initial learning rate for adam')
+parser.add_argument('--lr_D', type=float, default=3e-5, help='initial discriminator learning rate for adam')
+parser.add_argument('--lr_G', type=float, default=3e-5, help='initial generator learning rate for adam')
+parser.add_argument('--lr_C', type=float, default=3e-5, help='initial classifier learning rate for adam')
 parser.add_argument('--beta1', type=float, default=0.5, help='momentum term of adam')
 
 # debug parameters
