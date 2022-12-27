@@ -2,11 +2,14 @@ import networks
 import losses
 import torch
 from torch import nn
+import torch.autograd as autograd
 import os
 import itertools
 from collections import OrderedDict
 from loguru import logger
 import sys
+
+LAMBDA = 10 # Gradient penalty lambda hyperparameter
 
 class FaceModel(nn.Module):
     def __init__(self,opt,isTrain = True,input_nc = 3):
@@ -31,6 +34,7 @@ class FaceModel(nn.Module):
         self.sig_names = ["real_B","fake_B"]
         self.loss_names = ['G_GAN', 'G_NP', 'D_real', 'D_fake','C', 'D', 'G']
 
+        self.batch_size = opt.batch_size
         self.channels = 3
         self.frames = 64
         self.width = 128
@@ -101,6 +105,10 @@ class FaceModel(nn.Module):
         self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5 *self.w_gan
         logger.debug("loss_D_fake: {}, loss_D_real: {}, loss_D: {}".format(self.loss_D_fake.item(), self.loss_D_real.item(), self.loss_D.item()))
         self.loss_D.backward()
+
+        # train with gradient penalty
+        gradient_penalty = self.calc_gradient_penalty(real_AB.data, fake_AB.data)
+        gradient_penalty.backward()
 
     def backward_G(self):
         # logger.debug("self.fake_B shape: {}".format(self.fake_B.shape))
@@ -174,6 +182,28 @@ class FaceModel(nn.Module):
             #     print(name, torch.isnan(param.grad).all())
             self.optimizer_cls.step()
             # self.optimizer_cls.zero_grad()
+    
+    def calc_gradient_penalty(self, real_data, fake_data):
+        #print real_data.size()
+        alpha = torch.rand(self.batch_size, 1, 1, 1, 1)
+        alpha = alpha.expand(real_data.size())
+        alpha = alpha.to(self.device) if self.gpu_ids else alpha
+
+        interpolates = alpha * real_data + ((1 - alpha) * fake_data)
+
+        if self.gpu_ids:
+            interpolates = interpolates.to(self.device)
+        interpolates = autograd.Variable(interpolates, requires_grad=True)
+
+        disc_interpolates = self.netSigDiscriminator(interpolates)
+
+        gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
+                                grad_outputs=torch.ones(disc_interpolates.size()).to(self.device) if self.gpu_ids else torch.ones(
+                                    disc_interpolates.size()),
+                                create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+        gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * LAMBDA
+        return gradient_penalty
 
     def eval(self):
         self.isTrain = False
