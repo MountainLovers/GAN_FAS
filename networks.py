@@ -298,12 +298,22 @@ class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator,self).__init__()
 
+        self.conv = nn.Sequential(
+            nn.Conv3d(4, 8, [1,5,5], stride=[1,2,2], padding=[0,2,2]),                 # [4,D,W,H] -> [8,D,W/2,H/2]
+            nn.InstanceNorm3d(8, affine=True),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            nn.Conv3d(8, 16, [3,3,3], stride=[2,4,4], padding=1),                      # [8,D,W/2,H/2] -> [16,D/2,W/8,H/8] [16,32,4,4]
+            nn.InstanceNorm3d(16, affine=True),
+            nn.LeakyReLU(0.2, inplace=True),
+        )
+
+        self.pool = nn.AdaptiveAvgPool3d((8, 2, 2))
+
         self.model = nn.Sequential(
-            nn.Linear(4*64*32*32, 65536),
+            nn.Linear(512, 64),
             nn.LeakyReLU(0.2),
-            nn.Linear(65536, 512),
-            nn.LeakyReLU(0.2),
-            nn.Linear(512, 1)
+            nn.Linear(64, 1)
         )
         
     def forward(self, x):
@@ -313,6 +323,8 @@ class Discriminator(nn.Module):
             returns :
                 validity
         """
-        x_flat = x.reshape((x.shape[0], (-1)))
-        validity = self.model(x_flat)
+        x = self.conv(x)                                    # [B, C:4, T:64, W:32, H:32] -> [B, 16, 32, 4, 4]
+        x = self.pool(x)                                    # [B, 16, 32, 4, 4] -> [B, 16, 8, 2, 2]
+        x = x.reshape(x.shape[0], -1)                       # [B, 16, 8, 2, 2] -> [B, 512]
+        validity = self.model(x)                            # [B, 512] -> [B, 1]
         return validity
