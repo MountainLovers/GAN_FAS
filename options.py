@@ -18,7 +18,7 @@ parser.add_argument('--model', type=str, default='model3', help='model in ablati
 
 parser.add_argument('--data_balance', dest="data_balance", action='store_true', help='data_balance, it is goo for oulu p3/4')
 parser.add_argument('--w_cls', type=int, default=1, help='weight of cls loss')
-parser.add_argument('--w_NP', type=float, default=0.7, help='weight of NP loss')
+parser.add_argument('--w_NP', type=float, default=5, help='weight of NP loss')
 parser.add_argument('--w_gan', type=int, default=1, help='weight of gan loss')
 
 # training parameters
