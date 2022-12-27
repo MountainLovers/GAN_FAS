@@ -111,14 +111,14 @@ if __name__ == '__main__':
                 # save sigal figure
                 plt.figure(dpi=300)
 
-                for i in range(ret['fake_B'].shape[0]):
-                    plt.subplot(ret['fake_B'].shape[0], 1, i+1)
-                    plt.plot(ret['fake_B'][i])
+                for ii in range(ret['fake_B'].shape[0]):
+                    plt.subplot(ret['fake_B'].shape[0], 1, ii+1)
+                    plt.plot(ret['fake_B'][ii])
                 # plt.savefig("%s/epoch_%d_fake.png" % (img_save_dir, e))
 
-                for i in range(ret['real_B'].shape[0]):
-                    plt.subplot(ret['real_B'].shape[0], 1, i+1)
-                    plt.plot(ret['real_B'][i])
+                for ii in range(ret['real_B'].shape[0]):
+                    plt.subplot(ret['real_B'].shape[0], 1, ii+1)
+                    plt.plot(ret['real_B'][ii])
 
                 plt.legend(labels=["fake","real"],loc="lower right",fontsize=6)
                 plt.savefig("%s/epoch_%d.png" % (img_save_dir, e))
@@ -140,10 +140,10 @@ if __name__ == '__main__':
 
             pad_meter.get_hter_apcer_etal_at_thr(pad_dev_mater.threshold)
             pad_meter.get_accuracy(pad_dev_mater.threshold)
-            logging.info("epoch %d"%e)
+            logging.info("epoch %d test"%e)
             logging.info('HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
                 pad_meter=pad_meter))
-            logger.info("epoch %d"%e)
+            logger.info("epoch %d test"%e)
             logger.info('HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
                 pad_meter=pad_meter))
             is_best = pad_meter.hter <= best_res
