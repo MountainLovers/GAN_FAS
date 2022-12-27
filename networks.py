@@ -298,36 +298,21 @@ class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator,self).__init__()
 
-        self.Conv = nn.Sequential(
-            nn.Conv3d(4, 16, [1,5,5], stride=1, padding=[0,2,2]),
-            nn.BatchNorm3d(16),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv3d(16, 32, [1,5,5], stride=1, padding=[0,2,2]),
-            nn.BatchNorm3d(32),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv3d(32, 64, [3,3,3], stride=1, padding=1),
-            nn.BatchNorm3d(64),
-            nn.Conv3d(64, 64, [3,3,3], stride=1, padding=1),
-            nn.BatchNorm3d(64),
-            nn.LeakyReLU(0.2, inplace=True),
-        )
-
-        self.GAP = nn.AdaptiveAvgPool3d((2, 2, 2))
-
-        self.FC = nn.Sequential(
-            nn.Linear(512, 128),
-            nn.ReLU(),
-            nn.Linear(128, 32),
-            nn.ReLU(),
-            nn.Linear(32, 1),
-            nn.Sigmoid()
+        self.model = nn.Sequential(
+            nn.Linear(4*64*32*32, 65536),
+            nn.LeakyReLU(0.2),
+            nn.Linear(65536, 512),
+            nn.LeakyReLU(0.2),
+            nn.Linear(512, 1)
         )
         
     def forward(self, x):
-        # print("In Discriminator(), x.dtype: {}".format(x.dtype))
-        b = x.shape[0]
-        x = self.Conv(x)                # [B, 4, D, W, H] -> [B, 64, D, W, H]
-        x = self.GAP(x)                 # [B, 64, D, W, H] -> [B, 64, 2, 2, 2]
-        x = x.reshape(b, -1)            # [B, 64, 2, 2, 2] -> [B, 512]
-        output = self.FC(x)
-        return output
+        """
+            inputs :
+                x : input feature [B, C:4, T:64, W:32, H:32]
+            returns :
+                validity
+        """
+        x_flat = x.reshape((x.shape[0], (-1)))
+        validity = self.model(x_flat)
+        return validity
