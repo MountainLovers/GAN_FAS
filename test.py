@@ -11,13 +11,15 @@ from statistics import PADMeter
 def eval_model(data_loader,model):
     model.eval()
     pad_meter = PADMeter()
+    sigs = []
     for data in data_loader:
         model.set_input(data)
         model.forward()
+        sigs.append(model.get_current_sigs())
         class_output = nn.functional.softmax(model.output, dim=1)
         pad_meter.update(model.label.cpu().data.numpy(),
                             class_output.cpu().data.numpy())
-    return pad_meter
+    return pad_meter, sigs
 if __name__ == '__main__':
     dev_file_list = opt.dev_file_list
     test_file_list = opt.test_file_list

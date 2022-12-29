@@ -29,6 +29,7 @@ parser.add_argument('--beta1', type=float, default=0.5, help='momentum term of a
 
 # debug parameters
 parser.add_argument('--seed', type=int, default=-1, help='random seed')
+parser.add_argument('--debug', type=int, default=1, help='debug model. save pics and debug outputs')
 
 # parse opt
 import os

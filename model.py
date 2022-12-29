@@ -128,9 +128,9 @@ class FaceModel(nn.Module):
         # logger.debug("loss_G ok")
         # logger.debug("loss_G_GAN: {}, loss_G_NP: {}, loss_G: {}".format(self.loss_G_GAN.item(), self.loss_G_NP.item(), self.loss_G.item()))
         logger.debug("loss_G_GAN: {}, loss_G_NP: {}, loss_G: {}".format(self.loss_G_GAN.item(), self.loss_G_NP.item(), self.loss_G.item()))
-        logger.debug("loss_G backward start")
+        # logger.debug("loss_G backward start")
         self.loss_G.backward()
-        logger.debug("loss_G backward ok")
+        # logger.debug("loss_G backward ok")
 
 
     def backward_C(self):
@@ -149,9 +149,9 @@ class FaceModel(nn.Module):
             self.optimizer_discriminate.zero_grad()
             # with torch.autograd.detect_anomaly():
             #     self.backward_D()
-            logger.trace("UPDATE D backward_D start")
+            # logger.trace("UPDATE D backward_D start")
             self.backward_D()
-            logger.trace("UPDATE D backward_D ok")
+            # logger.trace("UPDATE D backward_D ok")
             # for name, param in self.netSigDiscriminator.named_parameters():
             #     print(name, torch.isnan(param.grad).all())
             self.optimizer_discriminate.step()
@@ -163,9 +163,9 @@ class FaceModel(nn.Module):
             self.optimizer_sig.zero_grad()
             # with torch.autograd.detect_anomaly():
             #     self.backward_G()
-            logger.trace("UPDATE G backward_G start")
+            # logger.trace("UPDATE G backward_G start")
             self.backward_G() 
-            logger.trace("UPDATE G backward_G ok")
+            # logger.trace("UPDATE G backward_G ok")
             # for name, param in self.netEncoder.named_parameters():
             #     print(name, torch.isnan(param.grad).all())
             # for name, param in self.netSigDecoder.named_parameters():

@@ -84,6 +84,7 @@ class PADMeter(object):
         try:
             self.auc = roc_auc_score(self.label, self.output)
         except ValueError:
+            self.auc = 0
             pass
 
 

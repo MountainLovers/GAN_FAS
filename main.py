@@ -43,6 +43,8 @@ def setup_seed(seed):
 if __name__ == '__main__':
     # 设置随机数种子
     seed = opt.seed
+    d_flag = opt.debug
+    print(d_flag)
     if seed != -1:
         setup_seed(seed)
     else:
@@ -73,10 +75,11 @@ if __name__ == '__main__':
         logger.trace("model.train() ok")
         pad_meter_train = PADMeter()
         # print("!!!!!!!!!! pad_meter_train ok !!!!!!!!!!!!")
-        logger.trace("pad_meter_train ok")
+        # logger.trace("pad_meter_train ok")
+        itern = len(train_data_loader)
         for i, data in enumerate(train_data_loader):
             # print("!!!!!!!!!!!! BATCH {} !!!!!!!!!!!!!".format(i))
-            logger.trace("BATCH {}".format(i))
+            logger.trace("Train Iter {}".format(i))
             model.set_input(data)
             model.optimize_parameters()
             # print("output: {}".format(model.output))
@@ -93,47 +96,73 @@ if __name__ == '__main__':
             writer.add_scalars('train_loss/D', {'D_fake_loss': model.get_current_losses()['D_fake']}, i+ len(train_data_loader) *e)
             writer.add_scalars('train_loss/D', {'D': model.get_current_losses()['D']}, i+ len(train_data_loader) *e)
             writer.add_scalars('train_loss/G', {'G': model.get_current_losses()['G']}, i+ len(train_data_loader) *e)
-            if i %100 ==0:
+            if i % 20 ==0:
+                # logging.info(model.get_current_losses())
+                # logging.info('HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
+                #     pad_meter=pad_meter_train))
+                #############################
+                #######   show loss  ########
+                #############################
+                logger.info("Epoch [{}/{}] - TRAIN iter [{}/{}]: loss: {}".format(e, opt.epoch, i, itern, model.get_current_losses()))
+
+
+                #############################
+                ####    show padmeter  ######
+                #############################
                 pad_meter_train.get_eer_and_thr()
                 pad_meter_train.get_hter_apcer_etal_at_thr(pad_meter_train.threshold)
                 pad_meter_train.get_accuracy(pad_meter_train.threshold)
-                ret = model.get_current_sigs()
-                img_save_dir = os.path.join(opt.checkpoints_dir, opt.name, "res")
-                if not os.path.exists(img_save_dir):
-                    os.makedirs(img_save_dir)
-                logging.info(model.get_current_losses())
-                logging.info('HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
-                    pad_meter=pad_meter_train))
-                logger.info("Epoch [{}/{}] iter {}: train_loss: {}".format(e, opt.epoch, i, model.get_current_losses()))
-                logger.info('Epoch [{}/{}] iter {}: train HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
-                    e, opt.epoch, i, pad_meter=pad_meter_train))
+                logger.info('Epoch [{}/{}] - TRAIN iter [{}/{}]: HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
+                    e, opt.epoch, i, itern, pad_meter=pad_meter_train))
+                logger.info('Epoch [{}/{}] - TRAIN iter [{}/{}]: APCER {pad_meter.apcer:.4f} BPCER {pad_meter.bpcer:.4f} ACER {pad_meter.acer:.4f} AUC {pad_meter.auc:.4f}'.format(
+                    e, opt.epoch, i, itern, pad_meter=pad_meter_train))
+                writer.add_scalars('train_padmeter/ErrorRate', {'APCER': pad_meter_train.apcer}, i+ len(train_data_loader) *e)
+                writer.add_scalars('train_padmeter/ErrorRate', {'BPCER': pad_meter_train.bpcer}, i+ len(train_data_loader) *e)
+                writer.add_scalars('train_padmeter/ErrorRate', {'ACER': pad_meter_train.acer}, i+ len(train_data_loader) *e)
+                writer.add_scalars('train_padmeter/AUC', {'AUC': pad_meter_train.auc}, i+ len(train_data_loader) *e)
 
-                # save sigal figure
-                plt.figure(dpi=300)
+                if d_flag:
+                    #############################
+                    ####    save pic    #########
+                    #############################
+                    img_save_dir = os.path.join(opt.checkpoints_dir, opt.name, "res")
+                    train_img_save_dir = os.path.join(img_save_dir, "train")
+                    test_img_save_dir = os.path.join(img_save_dir, "test")
+                    if not os.path.exists(img_save_dir):
+                        os.makedirs(img_save_dir)
+                    if not os.path.exists(train_img_save_dir):
+                        os.makedirs(train_img_save_dir)
+                    if not os.path.exists(test_img_save_dir):
+                        os.makedirs(test_img_save_dir)
 
-                for ii in range(ret['fake_B'].shape[0]):
-                    plt.subplot(ret['fake_B'].shape[0], 1, ii+1)
-                    plt.plot(ret['fake_B'][ii])
-                # plt.savefig("%s/epoch_%d_fake.png" % (img_save_dir, e))
+                    ret = model.get_current_sigs()
 
-                for ii in range(ret['real_B'].shape[0]):
-                    plt.subplot(ret['real_B'].shape[0], 1, ii+1)
-                    plt.plot(ret['real_B'][ii])
+                    # save sigal figure
+                    plt.figure(dpi=300)
 
-                plt.legend(labels=["fake","real"],loc="lower right",fontsize=6)
-                plt.savefig("%s/epoch_%d.png" % (img_save_dir, e))
+                    for ii in range(ret['fake_B'].shape[0]):
+                        plt.subplot(ret['fake_B'].shape[0], 1, ii+1)
+                        plt.plot(ret['fake_B'][ii])
+                    # plt.savefig("%s/epoch_%d_fake.png" % (img_save_dir, e))
 
-                plt.close()
-                logger.trace("Epoch [{}] iter {}: save figs ok".format(e, i))
+                    for ii in range(ret['real_B'].shape[0]):
+                        plt.subplot(ret['real_B'].shape[0], 1, ii+1)
+                        plt.plot(ret['real_B'][ii])
 
-                # vutils.save_image(ret['fake_B'], "%s/epoch_%d_fake.png" % (img_save_dir, e), normalize=True)
-                # vutils.save_image(ret['real_B'], "%s/epoch_%d_real.png" % (img_save_dir, e), normalize=True)
+                    plt.legend(labels=["fake","real"],loc="lower right",fontsize=6)
+                    plt.savefig("%s/epoch_%d.png" % (train_img_save_dir, e))
+
+                    plt.close()
+                    logger.trace("Epoch [{}] - TRAIN iter [{}/{}]: save figs ok".format(e, i, itern))
+
+                    # vutils.save_image(ret['fake_B'], "%s/epoch_%d_fake.png" % (img_save_dir, e), normalize=True)
+                    # vutils.save_image(ret['real_B'], "%s/epoch_%d_real.png" % (img_save_dir, e), normalize=True)
 
 
         if e%1==0:
             model.eval()
-            pad_dev_mater = eval_model(dev_data_loader,model)
-            logger.info("Epoch [{}/{}] val_loss: {}".format(e, opt.epoch, model.get_current_losses()))
+            pad_dev_mater, _ = eval_model(dev_data_loader,model)
+            logger.info("Epoch [{}/{}] - VAL: loss: {}".format(e, opt.epoch, model.get_current_losses()))
             writer.add_scalars('val_loss/C', {'C': model.get_current_losses()['C']}, e)
             writer.add_scalars('val_loss/G', {'G_GAN_loss': model.get_current_losses()['G_GAN']}, e)
             writer.add_scalars('val_loss/G', {'G_NP_loss': model.get_current_losses()['G_NP']}, e)
@@ -142,8 +171,8 @@ if __name__ == '__main__':
             writer.add_scalars('val_loss/D', {'D': model.get_current_losses()['D']}, e)
             writer.add_scalars('val_loss/G', {'G': model.get_current_losses()['G']}, e)
 
-            pad_meter = eval_model(test_data_loader,model)
-            logger.info("Epoch [{}/{}] test_loss: {}".format(e, opt.epoch, model.get_current_losses()))
+            pad_meter, sigs = eval_model(test_data_loader,model)
+            logger.info("Epoch [{}/{}] - TEST: loss: {}".format(e, opt.epoch, model.get_current_losses()))
             writer.add_scalars('test_loss/C', {'C': model.get_current_losses()['C']}, e)
             writer.add_scalars('test_loss/G', {'G_GAN_loss': model.get_current_losses()['G_GAN']}, e)
             writer.add_scalars('test_loss/G', {'G_NP_loss': model.get_current_losses()['G_NP']}, e)
@@ -157,11 +186,42 @@ if __name__ == '__main__':
 
             pad_meter.get_hter_apcer_etal_at_thr(pad_dev_mater.threshold)
             pad_meter.get_accuracy(pad_dev_mater.threshold)
-            logging.info("epoch %d test"%e)
-            logging.info('HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
-                pad_meter=pad_meter))
-            logger.info('Epoch [{}/{}]: test HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
+            # logging.info("epoch %d test"%e)
+            # logging.info('HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
+                # pad_meter=pad_meter))
+            logger.info('Epoch [{}/{}] - TEST: HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
                 e, opt.epoch, pad_meter=pad_meter))
+            logger.info('Epoch [{}/{}] - TEST: APCER {pad_meter.apcer:.4f} BPCER {pad_meter.bpcer:.4f} ACER {pad_meter.acer:.4f} AUC {pad_meter.auc:.4f}'.format(
+                e, opt.epoch, pad_meter=pad_meter))
+            
+            writer.add_scalars('test_padmeter/ErrorRate', {'APCER': pad_meter.apcer}, e)
+            writer.add_scalars('test_padmeter/ErrorRate', {'BPCER': pad_meter.bpcer}, e)
+            writer.add_scalars('test_padmeter/ErrorRate', {'ACER': pad_meter.acer}, e)
+            writer.add_scalars('test_padmeter/AUC', {'AUC': pad_meter.auc}, e)
+
+            if d_flag:
+                for i_sigs, ret in enumerate(sigs):
+                    if i_sigs % 10 != 0:
+                        continue
+                    # ret = model.get_current_sigs()
+                    # save sigal figure
+                    plt.figure(dpi=300)
+
+                    for ii in range(ret['fake_B'].shape[0]):
+                        plt.subplot(ret['fake_B'].shape[0], 1, ii+1)
+                        plt.plot(ret['fake_B'][ii])
+                    # plt.savefig("%s/epoch_%d_fake.png" % (img_save_dir, e))
+
+                    for ii in range(ret['real_B'].shape[0]):
+                        plt.subplot(ret['real_B'].shape[0], 1, ii+1)
+                        plt.plot(ret['real_B'][ii])
+
+                    plt.legend(labels=["fake","real"],loc="lower right",fontsize=6)
+                    plt.savefig("%s/epoch_%d_%d.png" % (test_img_save_dir, e, i_sigs))
+
+                    plt.close()
+                logger.trace("Epoch [{}] - TEST: save figs ok".format(e))
+
             is_best = pad_meter.hter <= best_res
             best_res = min(pad_meter.hter, best_res)
             if is_best:
