@@ -31,8 +31,8 @@ if __name__ == '__main__':
     model.load_networks("best")
     model.eval()
 
-    pad_dev_mater = eval_model(dev_data_loader,model) 
-    pad_meter = eval_model(test_data_loader,model)
+    pad_dev_mater, _ = eval_model(dev_data_loader,model) 
+    pad_meter, _ = eval_model(test_data_loader,model)
 
     pad_meter.get_eer_and_thr()
     pad_dev_mater.get_eer_and_thr()
