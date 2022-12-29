@@ -12,14 +12,17 @@ def eval_model(data_loader,model):
     model.eval()
     pad_meter = PADMeter()
     sigs = []
+    losses = []
     for data in data_loader:
         model.set_input(data)
         model.forward()
+        retloss = model.cal_loss()
+        losses.append(retloss)
         sigs.append(model.get_current_sigs())
         class_output = nn.functional.softmax(model.output, dim=1)
         pad_meter.update(model.label.cpu().data.numpy(),
                             class_output.cpu().data.numpy())
-    return pad_meter, sigs
+    return pad_meter, sigs, losses
 if __name__ == '__main__':
     dev_file_list = opt.dev_file_list
     test_file_list = opt.test_file_list
@@ -31,8 +34,8 @@ if __name__ == '__main__':
     model.load_networks("best")
     model.eval()
 
-    pad_dev_mater, _ = eval_model(dev_data_loader,model) 
-    pad_meter, _ = eval_model(test_data_loader,model)
+    pad_dev_mater, _, _ = eval_model(dev_data_loader,model) 
+    pad_meter, _, _ = eval_model(test_data_loader,model)
 
     pad_meter.get_eer_and_thr()
     pad_dev_mater.get_eer_and_thr()

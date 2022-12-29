@@ -44,7 +44,6 @@ if __name__ == '__main__':
     # 设置随机数种子
     seed = opt.seed
     d_flag = opt.debug
-    print(d_flag)
     if seed != -1:
         setup_seed(seed)
     else:
@@ -161,25 +160,27 @@ if __name__ == '__main__':
 
         if e%1==0:
             model.eval()
-            pad_dev_mater, _ = eval_model(dev_data_loader,model)
-            logger.info("Epoch [{}/{}] - VAL: loss: {}".format(e, opt.epoch, model.get_current_losses()))
-            writer.add_scalars('val_loss/C', {'C': model.get_current_losses()['C']}, e)
-            writer.add_scalars('val_loss/G', {'G_GAN_loss': model.get_current_losses()['G_GAN']}, e)
-            writer.add_scalars('val_loss/G', {'G_NP_loss': model.get_current_losses()['G_NP']}, e)
-            writer.add_scalars('val_loss/D', {'D_real_loss': model.get_current_losses()['D_real']}, e)
-            writer.add_scalars('val_loss/D', {'D_fake_loss': model.get_current_losses()['D_fake']}, e)
-            writer.add_scalars('val_loss/D', {'D': model.get_current_losses()['D']}, e)
-            writer.add_scalars('val_loss/G', {'G': model.get_current_losses()['G']}, e)
+            pad_dev_mater, _, val_losses = eval_model(dev_data_loader,model)
+            for ii, vl in enumerate(val_losses):
+                writer.add_scalars('val_loss/C', {'C': vl['C']}, ii+ len(dev_data_loader) *e)
+                writer.add_scalars('val_loss/G', {'G_GAN_loss': vl['G_GAN']}, ii+ len(dev_data_loader) *e)
+                writer.add_scalars('val_loss/G', {'G_NP_loss': vl['G_NP']}, ii+ len(dev_data_loader) *e)
+                writer.add_scalars('val_loss/D', {'D_real_loss': vl['D_real']}, ii+ len(dev_data_loader) *e)
+                writer.add_scalars('val_loss/D', {'D_fake_loss': vl['D_fake']}, ii+ len(dev_data_loader) *e)
+                writer.add_scalars('val_loss/D', {'D': vl['D']}, ii+ len(dev_data_loader) *e)
+                writer.add_scalars('val_loss/G', {'G': vl['G']}, ii+ len(dev_data_loader) *e)
+                writer.add_scalars('val_loss/GP', {'GP': vl['GP']}, ii+ len(dev_data_loader) *e)
 
-            pad_meter, sigs = eval_model(test_data_loader,model)
-            logger.info("Epoch [{}/{}] - TEST: loss: {}".format(e, opt.epoch, model.get_current_losses()))
-            writer.add_scalars('test_loss/C', {'C': model.get_current_losses()['C']}, e)
-            writer.add_scalars('test_loss/G', {'G_GAN_loss': model.get_current_losses()['G_GAN']}, e)
-            writer.add_scalars('test_loss/G', {'G_NP_loss': model.get_current_losses()['G_NP']}, e)
-            writer.add_scalars('test_loss/D', {'D_real_loss': model.get_current_losses()['D_real']}, e)
-            writer.add_scalars('test_loss/D', {'D_fake_loss': model.get_current_losses()['D_fake']}, e)
-            writer.add_scalars('test_loss/D', {'D': model.get_current_losses()['D']}, e)
-            writer.add_scalars('test_loss/G', {'G': model.get_current_losses()['G']}, e)
+            pad_meter, sigs, test_losses = eval_model(test_data_loader,model)
+            for ii, vl in enumerate(test_losses):
+                writer.add_scalars('test_loss/C', {'C': vl['C']}, ii+ len(test_data_loader) *e)
+                writer.add_scalars('test_loss/G', {'G_GAN_loss': vl['G_GAN']}, ii+ len(test_data_loader) *e)
+                writer.add_scalars('test_loss/G', {'G_NP_loss': vl['G_NP']}, ii+ len(test_data_loader) *e)
+                writer.add_scalars('test_loss/D', {'D_real_loss': vl['D_real']}, ii+ len(test_data_loader) *e)
+                writer.add_scalars('test_loss/D', {'D_fake_loss': vl['D_fake']}, ii+ len(test_data_loader) *e)
+                writer.add_scalars('test_loss/D', {'D': vl['D']}, ii+ len(test_data_loader) *e)
+                writer.add_scalars('test_loss/G', {'G': vl['G']}, ii+ len(test_data_loader) *e)
+                writer.add_scalars('test_loss/GP', {'GP': vl['GP']}, ii+ len(test_data_loader) *e)
 
             pad_meter.get_eer_and_thr()
             pad_dev_mater.get_eer_and_thr()
