@@ -28,9 +28,9 @@ class FaceModel(nn.Module):
         # torch.backends.cudnn.benchmark = True
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
         self.isTrain = isTrain
-        self.netEncoder = networks.init_net(networks.Encoder32(),gpu_ids=self.gpu_ids)
-        self.netClassifier = networks.init_net(networks.Classifier(), gpu_ids=self.gpu_ids)
-        self.netSigDecoder = networks.init_net(networks.Decoder(),gpu_ids=self.gpu_ids)
+        self.netEncoder = networks.init_net(networks.EncoderResnet(),gpu_ids=self.gpu_ids)
+        self.netClassifier = networks.init_net(networks.ClassifierResnet(), gpu_ids=self.gpu_ids)
+        self.netSigDecoder = networks.init_net(networks.DecoderResnet(),gpu_ids=self.gpu_ids)
         self.netSigDiscriminator = networks.init_net(networks.Discriminator(),gpu_ids=self.gpu_ids)
 
         self.model_names = ["Encoder","SigDecoder","SigDiscriminator","Classifier"]

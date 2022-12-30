@@ -5,6 +5,7 @@ from torch.nn import init
 from torch.nn.modules.utils import _triple
 import math
 from loguru import logger
+import resnet
 
 def init_weights(net, init_type='normal', init_gain=0.02):
     """Initialize network weights.
@@ -131,6 +132,50 @@ class Decoder(nn.Module):
         x = self.DConv2(x)                      # [256, 32, 1, 1] -> [128, 64, 1, 1]
 
         x = self.Conv(x).squeeze(1).squeeze(-1).squeeze(-1)    # [128, 64, 1, 1] -> [1, 64, 1, 1] -> [ , 64]
+
+        return x
+
+class DecoderResnet(nn.Module):
+    def __init__(self, in_channels=2048, out_channels=1):
+        super(DecoderResnet, self).__init__()
+        inter_dim = 1024
+        frames = 16
+
+        self.conv1 = nn.Sequential(
+            nn.ConvTranspose1d(in_channels, inter_dim, kernel_size=16, stride=1, padding=0, output_padding=0, bias=False),          # [2048, 1] -> [1024, 16]
+            nn.InstanceNorm1d(inter_dim, affine=True, track_running_stats=True),
+            nn.LeakyReLU(inplace=True)       
+        )
+
+        self.conv2 = nn.Sequential(
+            nn.ConvTranspose1d(inter_dim, inter_dim//2, kernel_size=4, stride=2, padding=1, output_padding=0, bias=False),          # [1024, 16] -> [512, 32]
+            nn.InstanceNorm1d(inter_dim//2, affine=True, track_running_stats=True),
+            nn.LeakyReLU(inplace=True)       
+        )
+
+        self.conv3 = nn.Sequential(
+            nn.ConvTranspose1d(inter_dim//2, inter_dim//4, kernel_size=2, stride=2, padding=0, output_padding=0, bias=False),       # [512, 32] -> [256, 64]
+            nn.InstanceNorm1d(inter_dim//4, affine=True, track_running_stats=True),
+            nn.LeakyReLU(inplace=True)       
+        )
+
+        self.conv4 = nn.Sequential(
+            nn.ConvTranspose1d(inter_dim//4, out_channels, kernel_size=1, stride=1, padding=0, output_padding=0, bias=False)                  # [256, 64] -> [1, 64]      
+        )
+
+    def forward(self, x):
+        """
+            inputs :
+                x : lantent-space feature [B, C:2048(restnet50)]
+            returns :
+                x : rppg signal [B, T:64]
+        """
+        x = x.unsqueeze(-1)                      # [B, C] -> [B, C, 1]
+        x = self.conv1(x)
+        x = self.conv2(x)   
+        x = self.conv3(x)  
+        x = self.conv4(x)  
+        x = x.view(x.shape[0], -1)    # [128, 64, 1, 1] -> [1, 64, 1, 1] -> [ , 64]
 
         return x
 
@@ -277,6 +322,28 @@ class Encoder32(nn.Module):
 
         return x
 
+
+class EncoderResnet(nn.Module):
+    def __init__(self):
+        super(EncoderResnet, self).__init__()
+        self.resnet = resnet.generate_model(model_depth=50,             # (10 | 18 | 34 | 50 | 101)
+                                n_input_channels=3,
+                                shortcut_type='B',
+                                conv1_t_size=7,
+                                conv1_t_stride=1,
+                                no_max_pool=False)
+
+    def forward(self, x):
+        """
+            inputs :
+                x : input feature [B, C:3, T:64, W:32, H:32]
+            returns :
+                resnet 50:
+                x : latent-space feature [B, C:2048]
+        """
+        latent = self.resnet(x)
+        return latent
+
 class Classifier(nn.Module):
     def __init__(self, in_channels=128):
         super(Classifier, self).__init__()
@@ -321,6 +388,33 @@ class Classifier(nn.Module):
         # feat = x
         pred = self.classifier(x)
         # print("!!!!!!!!!!!!!!!!!!!!!!!!!! 5 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+         
+        return pred 
+
+class ClassifierResnet(nn.Module):
+    def __init__(self, in_channels=2048):
+        super(ClassifierResnet, self).__init__()
+
+        self.classifier = nn.Sequential(nn.Linear(in_channels, 512),
+                                        nn.BatchNorm1d(512),
+                                        nn.Dropout(p=0.3),
+                                        nn.ReLU(),
+                                        nn.Linear(512, 128),
+                                        nn.BatchNorm1d(128),
+                                        nn.Dropout(p=0.3),
+                                        nn.ReLU(),
+                                        nn.Linear(128, 2)
+                                        )
+                    
+
+    def forward(self, x):
+        """
+            inputs :
+                x : latent-space feature [B, C:2048]
+            returns :
+                pred
+        """
+        pred = self.classifier(x)
          
         return pred 
 
