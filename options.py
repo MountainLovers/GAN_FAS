@@ -23,6 +23,7 @@ parser.add_argument('--w_L1', type=float, default=1, help='weight of L1 loss')
 parser.add_argument('--w_gan', type=int, default=1, help='weight of gan loss')
 
 # training parameters
+parser.add_argument('--k', type=int, default=1, help='train D per k iter')
 parser.add_argument('--lr_D', type=float, default=3e-5, help='initial discriminator learning rate for adam')
 parser.add_argument('--lr_G', type=float, default=3e-5, help='initial generator learning rate for adam')
 parser.add_argument('--lr_C', type=float, default=3e-5, help='initial classifier learning rate for adam')

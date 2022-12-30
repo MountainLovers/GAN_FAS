@@ -44,6 +44,8 @@ class FaceModel(nn.Module):
         self.width = 128
         self.height = 128
 
+        self.K = opt.k
+
         # Discriminator loss
         self.criterionGan = losses.GANLoss()
         # Decoder loss
@@ -134,23 +136,24 @@ class FaceModel(nn.Module):
         logger.debug("loss_C: {}".format(self.loss_C.item()))
         self.loss_C.backward()
 
-    def optimize_parameters(self):
+    def optimize_parameters(self, iter):
         self.forward()
         
         if self.model =="model3":
-            # update D
-            logger.trace("UPDATE D")
-            self.set_requires_grad(self.netSigDiscriminator, True) 
-            self.optimizer_discriminate.zero_grad()
-            # with torch.autograd.detect_anomaly():
-            #     self.backward_D()
-            # logger.trace("UPDATE D backward_D start")
-            self.backward_D()
-            # logger.trace("UPDATE D backward_D ok")
-            # for name, param in self.netSigDiscriminator.named_parameters():
-            #     print(name, torch.isnan(param.grad).all())
-            self.optimizer_discriminate.step()
-            # self.optimizer_discriminate.zero_grad()
+            if (iter % self.K == 0):
+                # update D
+                logger.trace("UPDATE D")
+                self.set_requires_grad(self.netSigDiscriminator, True) 
+                self.optimizer_discriminate.zero_grad()
+                # with torch.autograd.detect_anomaly():
+                #     self.backward_D()
+                # logger.trace("UPDATE D backward_D start")
+                self.backward_D()
+                # logger.trace("UPDATE D backward_D ok")
+                # for name, param in self.netSigDiscriminator.named_parameters():
+                #     print(name, torch.isnan(param.grad).all())
+                self.optimizer_discriminate.step()
+                # self.optimizer_discriminate.zero_grad()
         if self.model =="model3" or self.model =="model2":
             # update G_depth
             logger.trace("UPDATE G")

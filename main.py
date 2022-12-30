@@ -80,7 +80,7 @@ if __name__ == '__main__':
             # print("!!!!!!!!!!!! BATCH {} !!!!!!!!!!!!!".format(i))
             logger.trace("Train Iter {}".format(i))
             model.set_input(data)
-            model.optimize_parameters()
+            model.optimize_parameters(i)
             # print("output: {}".format(model.output))
             class_output = nn.functional.softmax(model.output, dim=1)
             # print("label: {}".format(model.label.cpu().data.numpy()))
