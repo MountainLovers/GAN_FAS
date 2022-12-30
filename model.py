@@ -18,7 +18,6 @@ class FaceModel(nn.Module):
 
         self.model = opt.model
         self.w_cls = opt.w_cls 
-        self.w_NP = opt.w_NP
         self.w_L1 = opt.w_L1
         self.w_gan = opt.w_gan
 
@@ -35,8 +34,8 @@ class FaceModel(nn.Module):
 
         self.model_names = ["Encoder","SigDecoder","SigDiscriminator","Classifier"]
         self.sig_names = ["real_B","fake_B"]
-        self.loss_names = ['G_GAN', 'G_NP', 'G_L1', 'D_real', 'D_fake','C', 'D', 'G']
-        self.val_loss_names = ['G_GAN', 'G_NP', 'G_L1', 'D_real', 'D_fake','C', 'D', 'G']
+        self.loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake','C', 'D', 'G']
+        self.val_loss_names = ['G_GAN', 'G_L1', 'D_real', 'D_fake','C', 'D', 'G']
 
         self.batch_size = opt.batch_size
         self.channels = 3
@@ -49,7 +48,7 @@ class FaceModel(nn.Module):
         # Discriminator loss
         self.criterionGan = losses.GANLoss()
         # Decoder loss
-        self.criterionNP = losses.Neg_Pearson()
+        # self.criterionNP = losses.Neg_Pearson()
         self.criterionL1 = torch.nn.L1Loss()
         # cls loss
         self.criterionCls = [torch.nn.CrossEntropyLoss(),losses.FocalLoss()]
@@ -122,10 +121,10 @@ class FaceModel(nn.Module):
         # fake_AB = torch.cat((self.real_A, fake_B_repeated), 1)
         pred_fake = self.netSigDiscriminator(self.fake_AB.detach())
         self.loss_G_GAN = self.criterionGan(pred_fake, True)
-        self.loss_G_NP = self.criterionNP(self.fake_B, self.real_B)
+        # self.loss_G_NP = self.criterionNP(self.fake_B, self.real_B)
         self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B)
-        self.loss_G = self.loss_G_NP*self.w_NP + self.loss_G_GAN *self.w_gan + self.loss_G_L1*self.w_L1
-        logger.debug("loss_G_GAN: {}, loss_G_NP: {}, loss_G_L1: {}, loss_G: {}".format(self.loss_G_GAN.item(), self.loss_G_NP.item(), self.loss_G_L1.item(), self.loss_G.item()))
+        self.loss_G = self.loss_G_GAN *self.w_gan + self.loss_G_L1*self.w_L1
+        logger.debug("loss_G_GAN: {}, loss_G_L1: {}, loss_G: {}".format(self.loss_G_GAN.item(), self.loss_G_L1.item(), self.loss_G.item()))
         # logger.debug("loss_G backward start")
         self.loss_G.backward()
 
@@ -197,12 +196,12 @@ class FaceModel(nn.Module):
         # G
         pred_fake = self.netSigDiscriminator(self.fake_AB.detach())
         val_loss_G_GAN = self.criterionGan(pred_fake, True)
-        val_loss_G_NP = self.criterionNP(self.fake_B, self.real_B)
+        # val_loss_G_NP = self.criterionNP(self.fake_B, self.real_B)
         val_loss_G_L1 = self.criterionL1(self.fake_B, self.real_B)
-        val_loss_G = val_loss_G_NP*self.w_NP + val_loss_G_GAN * self.w_gan + val_loss_G_L1*self.w_L1
+        val_loss_G = val_loss_G_GAN * self.w_gan + val_loss_G_L1*self.w_L1
         # logger.debug("VAL: loss_G_GAN: {}, loss_G_NP: {}, loss_G: {}".format(val_loss_G_GAN.item(), val_loss_G_NP.item(), val_loss_G.item()))
         ret['G_GAN'] = val_loss_G_GAN.item()
-        ret['G_NP'] = val_loss_G_NP.item()
+        # ret['G_NP'] = val_loss_G_NP.item()
         ret['G_L1'] = val_loss_G_L1.item()
         ret['G'] = val_loss_G.item()
 

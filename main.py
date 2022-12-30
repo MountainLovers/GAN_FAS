@@ -123,7 +123,6 @@ if __name__ == '__main__':
 
             writer.add_scalars('train_loss/C', {'C': model.get_current_losses()['C']}, i+ len(train_data_loader) *e)
             writer.add_scalars('train_loss/G', {'G_GAN_loss': model.get_current_losses()['G_GAN']}, i+ len(train_data_loader) *e)
-            writer.add_scalars('train_loss/G', {'G_NP_loss': model.get_current_losses()['G_NP']}, i+ len(train_data_loader) *e)
             writer.add_scalars('train_loss/G', {'G_L1': model.get_current_losses()['G_L1']}, i+ len(train_data_loader) *e)
             writer.add_scalars('train_loss/D', {'D_real_loss': model.get_current_losses()['D_real']}, i+ len(train_data_loader) *e)
             writer.add_scalars('train_loss/D', {'D_fake_loss': model.get_current_losses()['D_fake']}, i+ len(train_data_loader) *e)
@@ -181,7 +180,6 @@ if __name__ == '__main__':
             for ii, vl in enumerate(val_losses):
                 writer.add_scalars('val_loss/C', {'C': vl['C']}, ii+ len(dev_data_loader) *e)
                 writer.add_scalars('val_loss/G', {'G_GAN_loss': vl['G_GAN']}, ii+ len(dev_data_loader) *e)
-                writer.add_scalars('val_loss/G', {'G_NP_loss': vl['G_NP']}, ii+ len(dev_data_loader) *e)
                 writer.add_scalars('val_loss/G', {'G_L1': vl['G_L1']}, ii+ len(dev_data_loader) *e)
                 writer.add_scalars('val_loss/D', {'D_real_loss': vl['D_real']}, ii+ len(dev_data_loader) *e)
                 writer.add_scalars('val_loss/D', {'D_fake_loss': vl['D_fake']}, ii+ len(dev_data_loader) *e)
@@ -192,7 +190,6 @@ if __name__ == '__main__':
             for ii, vl in enumerate(test_losses):
                 writer.add_scalars('test_loss/C', {'C': vl['C']}, ii+ len(test_data_loader) *e)
                 writer.add_scalars('test_loss/G', {'G_GAN_loss': vl['G_GAN']}, ii+ len(test_data_loader) *e)
-                writer.add_scalars('test_loss/G', {'G_NP_loss': vl['G_NP']}, ii+ len(test_data_loader) *e)
                 writer.add_scalars('test_loss/G', {'G_L1': vl['G_L1']}, ii+ len(test_data_loader) *e)
                 writer.add_scalars('test_loss/D', {'D_real_loss': vl['D_real']}, ii+ len(test_data_loader) *e)
                 writer.add_scalars('test_loss/D', {'D_fake_loss': vl['D_fake']}, ii+ len(test_data_loader) *e)
