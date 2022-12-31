@@ -139,28 +139,39 @@ class DecoderResnet(nn.Module):
     def __init__(self, in_channels=2048, out_channels=1):
         super(DecoderResnet, self).__init__()
         inter_dim = 1024
-        frames = 16
 
-        self.conv1 = nn.Sequential(
+        self.dconv1 = nn.Sequential(
             nn.ConvTranspose1d(in_channels, inter_dim, kernel_size=16, stride=1, padding=0, output_padding=0, bias=False),          # [2048, 1] -> [1024, 16]
             nn.InstanceNorm1d(inter_dim, affine=True, track_running_stats=True),
             nn.LeakyReLU(inplace=True)       
         )
 
-        self.conv2 = nn.Sequential(
+        self.dconv2 = nn.Sequential(
             nn.ConvTranspose1d(inter_dim, inter_dim//2, kernel_size=4, stride=2, padding=1, output_padding=0, bias=False),          # [1024, 16] -> [512, 32]
             nn.InstanceNorm1d(inter_dim//2, affine=True, track_running_stats=True),
             nn.LeakyReLU(inplace=True)       
         )
 
-        self.conv3 = nn.Sequential(
+        self.dconv3 = nn.Sequential(
+            nn.ConvTranspose1d(inter_dim//2, inter_dim//2, kernel_size=3, stride=1, padding=1, output_padding=0, bias=False),       # [512, 32] -> [512, 32]
+            nn.InstanceNorm1d(inter_dim//2, affine=True, track_running_stats=True),
+            nn.LeakyReLU(inplace=True)       
+        )
+
+        self.dconv4 = nn.Sequential(
             nn.ConvTranspose1d(inter_dim//2, inter_dim//4, kernel_size=2, stride=2, padding=0, output_padding=0, bias=False),       # [512, 32] -> [256, 64]
             nn.InstanceNorm1d(inter_dim//4, affine=True, track_running_stats=True),
             nn.LeakyReLU(inplace=True)       
         )
 
-        self.conv4 = nn.Sequential(
-            nn.ConvTranspose1d(inter_dim//4, out_channels, kernel_size=1, stride=1, padding=0, output_padding=0, bias=False)                  # [256, 64] -> [1, 64]      
+        self.dconv5 = nn.Sequential(
+            nn.ConvTranspose1d(inter_dim//4, inter_dim//8, kernel_size=3, stride=1, padding=1, output_padding=0, bias=False),       # [512, 32] -> [256, 64]
+            nn.InstanceNorm1d(inter_dim//8, affine=True, track_running_stats=True),
+            nn.LeakyReLU(inplace=True)       
+        )
+
+        self.dconv_final = nn.Sequential(
+            nn.ConvTranspose1d(inter_dim//8, out_channels, kernel_size=1, stride=1, padding=0, output_padding=0, bias=False)                  # [256, 64] -> [1, 64]      
         )
 
     def forward(self, x):
@@ -171,10 +182,12 @@ class DecoderResnet(nn.Module):
                 x : rppg signal [B, T:64]
         """
         x = x.unsqueeze(-1)                      # [B, C] -> [B, C, 1]
-        x = self.conv1(x)
-        x = self.conv2(x)   
-        x = self.conv3(x)  
-        x = self.conv4(x)  
+        x = self.dconv1(x)
+        x = self.dconv2(x)   
+        x = self.dconv3(x)  
+        x = self.dconv4(x)  
+        x = self.dconv5(x)  
+        x = self.dconv_final(x)  
         x = x.view(x.shape[0], -1)    # [128, 64, 1, 1] -> [1, 64, 1, 1] -> [ , 64]
 
         return x
