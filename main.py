@@ -171,7 +171,6 @@ if __name__ == '__main__':
                 writer.add_scalars('val_loss/D', {'D_fake_loss': vl['D_fake']}, ii+ len(dev_data_loader) *e)
                 writer.add_scalars('val_loss/D', {'D': vl['D']}, ii+ len(dev_data_loader) *e)
                 writer.add_scalars('val_loss/G', {'G': vl['G']}, ii+ len(dev_data_loader) *e)
-                writer.add_scalars('val_loss/GP', {'GP': vl['GP']}, ii+ len(dev_data_loader) *e)
 
             pad_meter, sigs, test_losses = eval_model(test_data_loader,model)
             for ii, vl in enumerate(test_losses):
@@ -183,7 +182,6 @@ if __name__ == '__main__':
                 writer.add_scalars('test_loss/D', {'D_fake_loss': vl['D_fake']}, ii+ len(test_data_loader) *e)
                 writer.add_scalars('test_loss/D', {'D': vl['D']}, ii+ len(test_data_loader) *e)
                 writer.add_scalars('test_loss/G', {'G': vl['G']}, ii+ len(test_data_loader) *e)
-                writer.add_scalars('test_loss/GP', {'GP': vl['GP']}, ii+ len(test_data_loader) *e)
 
             pad_meter.get_eer_and_thr()
             pad_dev_mater.get_eer_and_thr()
