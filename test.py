@@ -13,15 +13,17 @@ def eval_model(data_loader,model):
     pad_meter = PADMeter()
     sigs = []
     losses = []
-    for data in data_loader:
-        model.set_input(data)
-        model.forward()
-        retloss = model.cal_loss()
-        losses.append(retloss)
-        sigs.append(model.get_current_sigs())
-        class_output = nn.functional.softmax(model.output, dim=1)
-        pad_meter.update(model.label.cpu().data.numpy(),
-                            class_output.cpu().data.numpy())
+    
+    with torch.no_grad():
+        for data in data_loader:
+            model.set_input(data)
+            model.forward()
+            retloss = model.cal_loss()
+            losses.append(retloss)
+            sigs.append(model.get_current_sigs())
+            class_output = nn.functional.softmax(model.output, dim=1)
+            pad_meter.update(model.label.cpu().data.numpy(),
+                                class_output.cpu().data.numpy())
     return pad_meter, sigs, losses
 if __name__ == '__main__':
     dev_file_list = opt.dev_file_list
