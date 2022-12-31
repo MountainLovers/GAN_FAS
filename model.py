@@ -36,7 +36,7 @@ class FaceModel(nn.Module):
         self.model_names = ["Encoder","SigDecoder","SigDiscriminator","Classifier"]
         self.sig_names = ["real_B","fake_B"]
         self.loss_names = ['G_GAN', 'G_NP', 'G_L1', 'D_real', 'D_fake','C', 'D', 'G']
-        self.val_loss_names = ['G_GAN', 'G_NP', 'G_L1', 'D_real', 'D_fake','C', 'D', 'G', 'GP']
+        self.val_loss_names = ['G_GAN', 'G_NP', 'G_L1', 'D_real', 'D_fake','C', 'D', 'G']
 
         self.batch_size = opt.batch_size
         self.channels = 3
@@ -112,7 +112,7 @@ class FaceModel(nn.Module):
         self.loss_D.backward()
 
         # train with gradient penalty
-        gradient_penalty = self.calc_gradient_penalty(self.real_AB.data, self.fake_AB.data)
+        gradient_penalty = self.calc_gradient_penalty(self.real_AB.detach(), self.fake_AB.detach())
         logger.debug("gradient_penalty: {}".format(gradient_penalty.item()))
         gradient_penalty.backward()
 
@@ -187,13 +187,10 @@ class FaceModel(nn.Module):
         pred_real = self.netSigDiscriminator(self.real_AB.detach())
         val_loss_D_real = self.criterionGan(pred_real, True)
         val_loss_D = (val_loss_D_fake + val_loss_D_real) * 0.5 *self.w_gan
-        # train with gradient penalty
-        val_gradient_penalty = self.calc_gradient_penalty(self.real_AB.data, self.fake_AB.data)
         # logger.debug("VAL: loss_D_fake: {}, loss_D_real: {}, loss_D: {}".format(val_loss_D_fake.item(), val_loss_D_real.item(), val_loss_D.item(), val_gradient_penalty.item()))
         ret['D_fake'] = val_loss_D_fake.item()
         ret['D_real'] = val_loss_D_real.item()
         ret['D'] = val_loss_D.item()
-        ret['GP'] = val_gradient_penalty.item()
 
         # G
         pred_fake = self.netSigDiscriminator(self.fake_AB.detach())
