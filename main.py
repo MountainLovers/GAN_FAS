@@ -67,7 +67,7 @@ if __name__ == '__main__':
 
     writer.iter = 0
     for e in range(opt.epoch):
-        logger.info("EPOCH {}".format(e))
+        logger.info("EPOCH [{}] Train".format(e))
         logger.trace("model.train() start")
         model.train()
         # print("!!!!!!!!!! model.train() ok !!!!!!!!!!!!")
@@ -160,6 +160,7 @@ if __name__ == '__main__':
 
 
         if e%1==0:
+            logger.info("Epoch [{}] Test".format(e))
             model.eval()
             pad_dev_mater, _, val_losses = eval_model(dev_data_loader,model)
             for ii, vl in enumerate(val_losses):
@@ -229,6 +230,8 @@ if __name__ == '__main__':
             if is_best:
                 best_name = "best"
                 model.save_networks(best_name)
+                logger.trace("Epoch [{}] - TEST: save best network ok, best_res = {}".format(e, best_res))
 
         filename = "lastest"
         model.save_networks(filename)
+        logger.trace("Epoch [{}] - TEST: save lastest network ok".format(e))
