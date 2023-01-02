@@ -4,3 +4,4 @@ checkpoints
 .ipynb_checkpoints
 *.log
 log/
+run.sh
