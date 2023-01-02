@@ -101,7 +101,7 @@ class SpatioTemporalConv(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, in_channels=512, out_channels=1):
+    def __init__(self, in_channels=128, out_channels=1):
         super(Decoder, self).__init__()
         frames = 16
         self.DConv1 = nn.Sequential(
@@ -121,16 +121,16 @@ class Decoder(nn.Module):
     def forward(self, x):
         """
             inputs :
-                x : latent-space feature [B, C:512, T:16, W:8, H:8]
+                x : latent-space feature [B, C:128, T:16, W:8, H:8]
             returns :
                 x : rppg signal [B, T:64]
         """
-        x = self.poolspa(x)                     # [512, 16, 8, 8] -> [512, 16, 1, 1]
+        x = self.poolspa(x)                     # [128, 16, 8, 8] -> [128, 16, 1, 1]
 
-        x = self.DConv1(x)                      # [512, 16, 1, 1] -> [256, 32, 1, 1]
-        x = self.DConv2(x)                      # [256, 32, 1, 1] -> [128, 64, 1, 1]
+        x = self.DConv1(x)                      # [128, 16, 1, 1] -> [64, 32, 1, 1]
+        x = self.DConv2(x)                      # [64, 32, 1, 1] -> [32, 64, 1, 1]
 
-        x = self.Conv(x).squeeze(1).squeeze(-1).squeeze(-1)    # [128, 64, 1, 1] -> [1, 64, 1, 1] -> [ , 64]
+        x = self.Conv(x).squeeze(1).squeeze(-1).squeeze(-1)    # [32, 64, 1, 1] -> [1, 64, 1, 1] -> [ , 64]
 
         return x
 
@@ -205,83 +205,93 @@ class Encoder128(nn.Module):
 
         return x
 
+class Block(nn.Module):
+    def __init__(self, in_planes, planes, stride=1, downsample=None):
+        super(Block, self).__init__()
+        self.conv1 = nn.Conv3d(in_planes, planes, 3, stride=stride, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm3d(planes)
+        self.leakyrelu = nn.LeakyReLU(inplace=True)
+
+        self.conv2 = nn.Conv3d(planes, planes, 3, stride=stride, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm3d(planes)
+
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        residual = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.leakyrelu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        out = self.leakyrelu(out)
+
+        return out
+
 class Encoder32(nn.Module):
     def __init__(self):
         super(Encoder32, self).__init__()
 
-        self.Conv1 = nn.Sequential(
-            nn.Conv3d(3, 16, [1,5,5], stride=1, padding=[0,2,2]),
-            nn.BatchNorm3d(16),
-            nn.LeakyReLU(inplace=True),
-        )
-
-        self.Conv2 = nn.Sequential(
-            nn.Conv3d(16, 32, kernel_size=(3,4,4), stride=(1,2,2), padding=(1,1,1), bias=False),
-            nn.BatchNorm3d(32),
-            nn.LeakyReLU(inplace=True),
-        )
-
-        self.Conv3 = nn.Sequential(
-            nn.Conv3d(32, 64, kernel_size=(4,4,4), stride=(2,2,2), padding=(1,1,1), bias=False),
+        self.Conv1 = nn.Sequential(                                 # [3, 64, 32, 32] -> [64, 64, 32, 32]
+            nn.Conv3d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm3d(64),
-            nn.LeakyReLU(inplace=True),
+            nn.LeakyReLU(inplace=True)
         )
 
-        self.Conv4 = nn.Sequential(
-            nn.Conv3d(64, 128, kernel_size=(4,3,3), stride=(2,1,1), padding=(1,1,1), bias=False),
-            nn.BatchNorm3d(128),
-            nn.LeakyReLU(inplace=True),
-        )
 
-        self.STConv1 = nn.Sequential(
-            SpatioTemporalConv(128, 256, [3, 3, 3], stride=1, padding=1),
-            nn.BatchNorm3d(256),
-            nn.LeakyReLU(inplace=True),
+        downsample = nn.Sequential(
+            nn.Conv3d(64, 128, kernel_size=1, stride=1, bias=False),
+            nn.BatchNorm3d(128)
         )
-        self.STConv2 = nn.Sequential(
-            SpatioTemporalConv(256, 512, [3, 3, 3], stride=1, padding=1),
-            nn.BatchNorm3d(512),
-            nn.LeakyReLU(inplace=True),
-        )
-        self.STConv3 = nn.Sequential(
-            SpatioTemporalConv(512, 512, [3, 3, 3], stride=1, padding=1),
-            nn.BatchNorm3d(512),
-            nn.LeakyReLU(inplace=True),
-        )
-        # self.STConv4 = nn.Sequential(
-        #     SpatioTemporalConv(64, 64, [3, 3, 3], stride=1, padding=1),
-        #     nn.BatchNorm3d(64),
-        #     nn.ReLU(inplace=True),
-        # )
+        self.CB1 = Block(64, 128, 1, downsample)
+        self.down1 = nn.Conv3d(128, 128, kernel_size=2, stride=2)
+
+        self.CB2 = Block(128, 128)
+        self.down2 = nn.Conv3d(128, 128, kernel_size=2, stride=2)
+
+        self.CB3 = Block(128, 128)
+        # self.down3 = nn.Conv3d(128, 128, kernel_size=2, stride=2)
+        
 
     def forward(self, x):
         """
             inputs :
                 x : input feature [B, C:3, T:64, W:32, H:32]
             returns :
-                x : latent-space feature [B, C:512, T:16, W:8, H:8]
+                x : latent-space feature [B, C:128, T:16, W:8, H:8]
         """
         # print("In Encoder32 forward(), x: {}".format(x.shape))
-        x = self.Conv1(x)                   # [3, 64, 32, 32] -> [16, 64, 32, 32]
+        x = self.Conv1(x)                   # [3, 64, 32, 32] -> [64, 64, 32, 32]
         # print("x1: {}".format(x))
+        # print("x: {}".format(x.shape))
+        out = self.CB1(x)                   # [64, 64, 32, 32] -> [128, 64, 32, 32]
+        # print("CB1: {}".format(out.shape))
+        out = self.down1(out)               # [128, 64, 32, 32] -> [128, 32, 16, 16]
+        # print("CB1 down1: {}".format(out.shape))
 
-        x = self.Conv2(x)                   # [16, 64, 32, 32] -> [32, 64, 16, 16]
-        x = self.Conv3(x)                   # [32, 64, 16, 16] -> [64, 32, 8, 8]
-        x = self.Conv4(x)                   # [64, 32, 8, 8] -> [128, 16, 8, 8]
+        out = self.CB2(out)                   # [128, 32, 16, 16] -> [128, 32, 16, 16]
+        # print("CB2: {}".format(out.shape))
+        out = self.down2(out)               # [128, 32, 16, 16] -> [128, 16, 8, 8]
+        # print("CB2 down2: {}".format(out.shape))
 
-        x = self.STConv1(x)                 # [128, 16, 8, 8] -> [256, 16, 8, 8]
-        x = self.STConv2(x)                 # [256, 16, 8, 8] -> [512, 16, 8, 8]
-        x = self.STConv3(x)                 # [512, 16, 8, 8] -> [512, 16, 8, 8]
-        # x = self.STConv4(x)                 # [64, 64, 32, 32] -> [64, 64, 32, 32]
-        # print("x3: {}".format(x))
+        out = self.CB3(out)                   # [128, 16, 8, 8] -> [128, 16, 8, 8]
+        # out = self.down3(out)
 
-        return x
+        return out
 
 class Classifier(nn.Module):
     def __init__(self, in_channels=128):
         super(Classifier, self).__init__()
         self.conv = nn.Sequential(
-            nn.Conv3d(512, 1024, [3,3,3], stride=1, padding=1),
+            nn.Conv3d(in_channels, 1024, [3,3,3], stride=1, padding=1),
             nn.BatchNorm3d(1024),
             nn.ReLU(inplace=True),
         )
@@ -303,7 +313,7 @@ class Classifier(nn.Module):
     def forward(self, x):
         """
             inputs :
-                x : latent-space feature [B, C:512, T:16, W:8, H:8]
+                x : latent-space feature [B, C:128, T:16, W:8, H:8]
             returns :
                 pred
         """
