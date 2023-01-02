@@ -222,7 +222,8 @@ class FaceModel(nn.Module):
 
         if self.gpu_ids:
             interpolates = interpolates.to(self.device)
-        interpolates = autograd.Variable(interpolates, requires_grad=True)
+        # interpolates = autograd.Variable(interpolates, requires_grad=True)
+        interpolates.requires_grad_(True)
 
         disc_interpolates = self.netSigDiscriminator(interpolates)
 
