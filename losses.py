@@ -85,12 +85,17 @@ class Neg_Pearson(nn.Module):    # Pearson range [-1, 1] so if < 0, abs|loss| ; 
             # if den == 0:
             #     den = den + 1e-8
             pearson = num / den
+
+            if (pearson >= 0):
+                loss += 1 - pearson
+            else:
+                loss += 1
             #if (pearson>=0).data.cpu().numpy():    # torch.cuda.ByteTensor -->  numpy
             #    loss += 1 - pearson
             #else:
             #    loss += 1 - torch.abs(pearson)
             # print("num: {}, den: {}, pearson: {}".format(num, den, pearson))
-            loss += 1 - pearson
+            # loss += 1 - pearson
             
             
         loss = loss/preds.shape[0]
