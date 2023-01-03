@@ -90,7 +90,7 @@ def main():
                     flag = False
                 
                 st = 0
-                ed = windows-1
+                ed = windows
 
                 while (ed < framesnum):
                     if flag:
@@ -153,7 +153,7 @@ def main():
                         flag = False
                     
                     st = 0
-                    ed = windows-1
+                    ed = windows
 
                     while (ed < framesnum):
                         if flag:
