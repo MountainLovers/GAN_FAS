@@ -44,16 +44,15 @@ class FaceModel(nn.Module):
         self.width = 128
         self.height = 128
 
+        # Discriminator loss
+        self.criterionGan = losses.GANLoss()
+        # Decoder loss
+        self.criterionNP = losses.Neg_Pearson()
+        self.criterionL1 = torch.nn.L1Loss()
+        # cls loss
+        self.criterionCls = [torch.nn.CrossEntropyLoss(),losses.FocalLoss()]
+        
         if self.isTrain:
-
-
-            # Discriminator loss
-            self.criterionGan = losses.GANLoss()
-            # Decoder loss
-            self.criterionNP = losses.Neg_Pearson()
-            self.criterionL1 = torch.nn.L1Loss()
-            # cls loss
-            self.criterionCls = [torch.nn.CrossEntropyLoss(),losses.FocalLoss()]
             # net G/
             self.optimizer_sig = torch.optim.Adam(itertools.chain(self.netEncoder.parameters(),
                                                                     self.netSigDecoder.parameters()), lr=opt.lr_G,betas=(opt.beta1, 0.999))
