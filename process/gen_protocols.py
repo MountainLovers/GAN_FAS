@@ -11,6 +11,9 @@ classes = ["Train", "Dev", "Test"]
 npy_dirs = ["Train_npynew", "Dev_npynew", "Test_npynew"]
 rppg_dirs = ["Train_rppg", "Dev_rppg", "Test_rppg"]
 
+windows = 64
+stride = 0
+
 def parseOULUProtocol(str):
     label = str.split(',')[0]
     name = str.split(',')[1]
@@ -33,14 +36,22 @@ def main():
 
     npysfx = "_yuv32.npy"
     rppgsfx = "_yuv8_new.npy"
+
+    sub_dir = "aug_%d_%d" % (windows, stride)
+
+    dstf_dir = os.path.join(os.path.join(proto_root_dir, protoc), sub_dir)
+
+    if not os.path.exists(dstf_dir):
+        os.mkdir(dstf_dir)
+
     # for protocol 1 and 2
     if protoc == "Protocol_1" or protoc == "Protocol_2":
         protocol_dir = os.path.join(proto_root_dir, protoc)
         # print(protocol_dir)
         for itype, clss in enumerate(classes):
             srcf_path = os.path.join(protocol_dir, clss + ".txt")
-            dstf_path = os.path.join(protocol_dir, clss + "_32_proto.txt")
-            errf_path = os.path.join(protocol_dir, clss + "_32_err.txt")
+            dstf_path = os.path.join(dstf_dir, clss + "_32_proto.txt")
+            errf_path = os.path.join(dstf_dir, clss + "_32_err.txt")
 
             npy_base_dir = os.path.join(root_dir, npy_dirs[itype])
             rppg_base_dir = os.path.join(root_dir, rppg_dirs[itype])
@@ -74,12 +85,20 @@ def main():
                     flag = False
                 
                 framesnum = get_frames(npy_path)
-                if framesnum < 64:
+                if framesnum < windows:
                     errf.write(npy_path + " frames: " + str(framesnum) + "\n")
                     flag = False
                 
-                if flag:
-                    dstf.write(npy_path + " " + rppg_path + " " + str(label) + "\n")
+                st = 0
+                ed = windows
+
+                while (ed < framesnum):
+                    if flag:
+                        dstf.write(npy_path + " " + rppg_path + " " + str(st) + " " + str(ed) + " " + str(label) + "\n")
+                        st += stride
+                        ed += stride
+                    if stride == 0:
+                        break
                 
                 line = srcf.readline()
                 
@@ -94,8 +113,8 @@ def main():
         for itype, clss in enumerate(classes):
             for idx in range(1, 7):
                 srcf_path = os.path.join(protocol_dir, clss + "_%d.txt" % idx)
-                dstf_path = os.path.join(protocol_dir, clss + "_%d_32_proto.txt" % idx)
-                errf_path = os.path.join(protocol_dir, clss + "_%d_32_err.txt" % idx)
+                dstf_path = os.path.join(dstf_dir, clss + "_%d_32_proto.txt" % (idx))
+                errf_path = os.path.join(dstf_dir, clss + "_%d_32_err.txt" % (idx))
 
                 npy_base_dir = os.path.join(root_dir, npy_dirs[itype])
                 rppg_base_dir = os.path.join(root_dir, rppg_dirs[itype])
@@ -131,12 +150,20 @@ def main():
                         flag = False
 
                     framesnum = get_frames(npy_path)
-                    if framesnum < 64:
+                    if framesnum < windows:
                         errf.write(npy_path + " frames: " + str(framesnum) + "\n")
                         flag = False
                     
-                    if flag:
-                        dstf.write(npy_path + " " + rppg_path + " " + str(label) + "\n")
+                    st = 0
+                    ed = windows
+
+                    while (ed < framesnum):
+                        if flag:
+                            dstf.write(npy_path + " " + rppg_path + " " + str(st) + " " + str(ed) + " " + str(label) + "\n")
+                            st += stride
+                            ed += stride
+                        if stride == 0:
+                            break
                     
                     line = srcf.readline()
                     
