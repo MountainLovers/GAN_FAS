@@ -18,6 +18,8 @@ class FaceModel(nn.Module):
 
         self.model = opt.model
         self.w_cls = opt.w_cls 
+        self.w_NP = opt.w_NP
+        self.w_L1 = opt.w_L1
         self.w_MSE = opt.w_MSE
         self.w_gan = opt.w_gan
 
@@ -34,8 +36,18 @@ class FaceModel(nn.Module):
 
         self.model_names = ["Encoder","SigDecoder","SigDiscriminator","Classifier"]
         self.sig_names = ["real_B","fake_B"]
-        self.loss_names = ['G_GAN', 'G_MSE', 'D_real', 'D_fake','C', 'D', 'G']
-        self.val_loss_names = ['G_GAN', 'G_MSE', 'D_real', 'D_fake','C', 'D', 'G']
+        self.loss_names = ['G_GAN', 'D_real', 'D_fake','C', 'D', 'G']
+        self.val_loss_names = ['G_GAN', 'D_real', 'D_fake','C', 'D', 'G']
+
+        if self.w_NP != 0:
+            self.loss_names.append('G_NP')
+            self.val_loss_names.append('G_NP')
+        if self.w_L1 != 0:
+            self.loss_names.append('G_L1')
+            self.val_loss_names.append('G_L1')
+        if self.w_MSE != 0:
+            self.loss_names.append('G_MSE')
+            self.val_loss_names.append('G_MSE')
 
         self.batch_size = opt.batch_size
         self.channels = 3
@@ -48,8 +60,8 @@ class FaceModel(nn.Module):
         # Discriminator loss
         self.criterionGan = losses.GANLoss()
         # Decoder loss
-        # self.criterionNP = losses.Neg_Pearson()
-        # self.criterionL1 = torch.nn.L1Loss()
+        self.criterionNP = losses.Neg_Pearson()
+        self.criterionL1 = torch.nn.L1Loss()
         self.criterionMSE = torch.nn.MSELoss()
         # cls loss
         self.criterionCls = [torch.nn.CrossEntropyLoss(),losses.FocalLoss()]
@@ -122,10 +134,23 @@ class FaceModel(nn.Module):
         # fake_AB = torch.cat((self.real_A, fake_B_repeated), 1)
         pred_fake = self.netSigDiscriminator(self.fake_AB.detach())
         self.loss_G_GAN = self.criterionGan(pred_fake, True)
-        # self.loss_G_NP = self.criterionNP(self.fake_B, self.real_B)
-        self.loss_G_MSE = self.criterionMSE(self.fake_B, self.real_B)
-        self.loss_G = self.loss_G_GAN *self.w_gan + self.loss_G_MSE*self.w_MSE
-        logger.debug("loss_G_GAN: {}, loss_G_MSE: {}, loss_G: {}".format(self.loss_G_GAN.item(), self.loss_G_MSE.item(), self.loss_G.item()))
+        self.loss_G = self.loss_G_GAN * self.w_gan
+        logger.debug("loss_G_GAN: {}".format(self.loss_G_GAN.item()))
+
+        if self.w_NP != 0:
+            self.loss_G_NP = self.criterionNP(self.fake_B, self.real_B)
+            self.loss_G = self.loss_G + self.loss_G_NP * self.w_NP
+            logger.debug("loss_G_NP: {}".format(self.loss_G_NP.item()))
+        if self.w_L1 != 0:
+            self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B)
+            self.loss_G = self.loss_G + self.loss_G_L1 * self.w_L1
+            logger.debug("loss_G_L1: {}".format(self.loss_G_L1.item()))
+        if self.w_MSE != 0:
+            self.loss_G_MSE = self.criterionMSE(self.fake_B, self.real_B)
+            self.loss_G = self.loss_G + self.loss_G_MSE * self.w_MSE
+            logger.debug("loss_G_MSE: {}".format(self.loss_G_MSE.item()))
+
+        logger.debug("loss_G: {}".format(self.loss_G.item()))
         # logger.debug("loss_G backward start")
         self.loss_G.backward()
 
@@ -197,13 +222,23 @@ class FaceModel(nn.Module):
         # G
         pred_fake = self.netSigDiscriminator(self.fake_AB.detach())
         val_loss_G_GAN = self.criterionGan(pred_fake, True)
-        # val_loss_G_NP = self.criterionNP(self.fake_B, self.real_B)
-        val_loss_G_MSE = self.criterionMSE(self.fake_B, self.real_B)
-        val_loss_G = val_loss_G_GAN * self.w_gan + val_loss_G_MSE*self.w_MSE
-        # logger.debug("VAL: loss_G_GAN: {}, loss_G_NP: {}, loss_G: {}".format(val_loss_G_GAN.item(), val_loss_G_NP.item(), val_loss_G.item()))
+        val_loss_G = val_loss_G_GAN * self.w_gan
         ret['G_GAN'] = val_loss_G_GAN.item()
-        # ret['G_NP'] = val_loss_G_NP.item()
-        ret['G_MSE'] = val_loss_G_MSE.item()
+
+        if self.w_NP != 0:
+            val_loss_G_NP = self.criterionNP(self.fake_B, self.real_B)
+            val_loss_G = val_loss_G + val_loss_G_NP * self.w_NP
+            ret['G_NP'] = val_loss_G_NP.item()
+        
+        if self.w_L1 != 0:
+            val_loss_G_L1 = self.criterionL1(self.fake_B, self.real_B)
+            val_loss_G = val_loss_G + val_loss_G_L1 * self.w_L1
+            ret['G_L1'] = val_loss_G_L1.item()
+            
+        if self.w_MSE != 0:
+            val_loss_G_MSE = self.criterionMSE(self.fake_B, self.real_B)
+            val_loss_G = val_loss_G + val_loss_G_MSE * self.w_MSE
+            ret['G_MSE'] = val_loss_G_MSE.item()
         ret['G'] = val_loss_G.item()
 
         # C

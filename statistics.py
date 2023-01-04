@@ -95,6 +95,12 @@ class PADMeter(object):
         TN, FN, FP, TP = self.eval_stat(thr)
         self.accuracy = accuracy = float(TP + TN) / len(self.output)
 
+    def get_four(self,thr=None):
+        if thr==None:
+            self.get_eer_and_thr()
+            thr = self.threshold
+        TN, FN, FP, TP = self.eval_stat(thr)
+        return TN, FN, TP, FP
 
 
 class AverageMeter(object):

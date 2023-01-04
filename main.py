@@ -89,6 +89,10 @@ if __name__ == '__main__':
     dev_file_list = opt.dev_file_list
     test_file_list = opt.test_file_list
     model = FaceModel(opt,isTrain = True,input_nc = 3)
+
+    loss_names = model.loss_names
+    val_loss_names = model.val_loss_names
+
     test_data_loader = DataLoader(AlignedDataset(test_file_list,isTrain = False), batch_size=test_batch_size,
                                    shuffle=True, num_workers=1,drop_last=True)
     dev_data_loader = DataLoader(AlignedDataset(dev_file_list,isTrain = False), batch_size=test_batch_size,
@@ -121,13 +125,16 @@ if __name__ == '__main__':
             pad_meter_train.update(model.label.cpu().data.numpy(),
                              class_output.cpu().data.numpy())
 
-            writer.add_scalars('train_loss/C', {'C': model.get_current_losses()['C']}, i+ len(train_data_loader) *e)
-            writer.add_scalars('train_loss/G', {'G_GAN_loss': model.get_current_losses()['G_GAN']}, i+ len(train_data_loader) *e)
-            writer.add_scalars('train_loss/G', {'G_MSE': model.get_current_losses()['G_MSE']}, i+ len(train_data_loader) *e)
-            writer.add_scalars('train_loss/D', {'D_real_loss': model.get_current_losses()['D_real']}, i+ len(train_data_loader) *e)
-            writer.add_scalars('train_loss/D', {'D_fake_loss': model.get_current_losses()['D_fake']}, i+ len(train_data_loader) *e)
-            writer.add_scalars('train_loss/D', {'D': model.get_current_losses()['D']}, i+ len(train_data_loader) *e)
-            writer.add_scalars('train_loss/G', {'G': model.get_current_losses()['G']}, i+ len(train_data_loader) *e)
+            # writer.add_scalars('train_loss/C', {'C': model.get_current_losses()['C']}, i+ len(train_data_loader) *e)
+            # writer.add_scalars('train_loss/G', {'G_GAN_loss': model.get_current_losses()['G_GAN']}, i+ len(train_data_loader) *e)
+            # writer.add_scalars('train_loss/G', {'G_MSE': model.get_current_losses()['G_MSE']}, i+ len(train_data_loader) *e)
+            # writer.add_scalars('train_loss/D', {'D_real_loss': model.get_current_losses()['D_real']}, i+ len(train_data_loader) *e)
+            # writer.add_scalars('train_loss/D', {'D_fake_loss': model.get_current_losses()['D_fake']}, i+ len(train_data_loader) *e)
+            # writer.add_scalars('train_loss/D', {'D': model.get_current_losses()['D']}, i+ len(train_data_loader) *e)
+            # writer.add_scalars('train_loss/G', {'G': model.get_current_losses()['G']}, i+ len(train_data_loader) *e)
+            for name in loss_names:
+                writer.add_scalars("train_loss/"+name[0], {name: model.get_current_losses()[name]}, i+ len(train_data_loader) *e)
+            
 
             train_d_flag = d_flag if d_flag > 0 else 20
             if i % train_d_flag == 0:
@@ -146,6 +153,9 @@ if __name__ == '__main__':
                 pad_meter_train.get_eer_and_thr()
                 pad_meter_train.get_hter_apcer_etal_at_thr(pad_meter_train.threshold)
                 pad_meter_train.get_accuracy(pad_meter_train.threshold)
+                tn, fn, tp, fp = pad_meter_train.get_four(pad_meter_train.threshold)
+                logger.info('Epoch [{}/{}] - TRAIN iter [{}/{}]: TN {} FN {} TP {} FP {}'.format(
+                    e, opt.epoch, i, itern, tn, fn, tp, fp))
                 logger.info('Epoch [{}/{}] - TRAIN iter [{}/{}]: HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
                     e, opt.epoch, i, itern, pad_meter=pad_meter_train))
                 logger.info('Epoch [{}/{}] - TRAIN iter [{}/{}]: APCER {pad_meter.apcer:.4f} BPCER {pad_meter.bpcer:.4f} ACER {pad_meter.acer:.4f} AUC {pad_meter.auc:.4f}'.format(
@@ -178,23 +188,29 @@ if __name__ == '__main__':
             model.eval()
             pad_dev_mater, _, val_losses = eval_model(dev_data_loader,model)
             for ii, vl in enumerate(val_losses):
-                writer.add_scalars('val_loss/C', {'C': vl['C']}, ii+ len(dev_data_loader) *e)
-                writer.add_scalars('val_loss/G', {'G_GAN_loss': vl['G_GAN']}, ii+ len(dev_data_loader) *e)
-                writer.add_scalars('val_loss/G', {'G_MSE': vl['G_MSE']}, ii+ len(dev_data_loader) *e)
-                writer.add_scalars('val_loss/D', {'D_real_loss': vl['D_real']}, ii+ len(dev_data_loader) *e)
-                writer.add_scalars('val_loss/D', {'D_fake_loss': vl['D_fake']}, ii+ len(dev_data_loader) *e)
-                writer.add_scalars('val_loss/D', {'D': vl['D']}, ii+ len(dev_data_loader) *e)
-                writer.add_scalars('val_loss/G', {'G': vl['G']}, ii+ len(dev_data_loader) *e)
+                
+                # writer.add_scalars('val_loss/C', {'C': vl['C']}, ii+ len(dev_data_loader) *e)
+                # writer.add_scalars('val_loss/G', {'G_GAN_loss': vl['G_GAN']}, ii+ len(dev_data_loader) *e)
+                # writer.add_scalars('val_loss/G', {'G_MSE': vl['G_MSE']}, ii+ len(dev_data_loader) *e)
+                # writer.add_scalars('val_loss/D', {'D_real_loss': vl['D_real']}, ii+ len(dev_data_loader) *e)
+                # writer.add_scalars('val_loss/D', {'D_fake_loss': vl['D_fake']}, ii+ len(dev_data_loader) *e)
+                # writer.add_scalars('val_loss/D', {'D': vl['D']}, ii+ len(dev_data_loader) *e)
+                # writer.add_scalars('val_loss/G', {'G': vl['G']}, ii+ len(dev_data_loader) *e)
+                for name in val_loss_names:
+                    writer.add_scalars("val_loss/"+name[0], {name: vl[name]}, ii+ len(dev_data_loader) *e)
+                
 
             pad_meter, sigs, test_losses = eval_model(test_data_loader,model)
             for ii, vl in enumerate(test_losses):
-                writer.add_scalars('test_loss/C', {'C': vl['C']}, ii+ len(test_data_loader) *e)
-                writer.add_scalars('test_loss/G', {'G_GAN_loss': vl['G_GAN']}, ii+ len(test_data_loader) *e)
-                writer.add_scalars('test_loss/G', {'G_MSE': vl['G_MSE']}, ii+ len(test_data_loader) *e)
-                writer.add_scalars('test_loss/D', {'D_real_loss': vl['D_real']}, ii+ len(test_data_loader) *e)
-                writer.add_scalars('test_loss/D', {'D_fake_loss': vl['D_fake']}, ii+ len(test_data_loader) *e)
-                writer.add_scalars('test_loss/D', {'D': vl['D']}, ii+ len(test_data_loader) *e)
-                writer.add_scalars('test_loss/G', {'G': vl['G']}, ii+ len(test_data_loader) *e)
+                # writer.add_scalars('test_loss/C', {'C': vl['C']}, ii+ len(test_data_loader) *e)
+                # writer.add_scalars('test_loss/G', {'G_GAN_loss': vl['G_GAN']}, ii+ len(test_data_loader) *e)
+                # writer.add_scalars('test_loss/G', {'G_MSE': vl['G_MSE']}, ii+ len(test_data_loader) *e)
+                # writer.add_scalars('test_loss/D', {'D_real_loss': vl['D_real']}, ii+ len(test_data_loader) *e)
+                # writer.add_scalars('test_loss/D', {'D_fake_loss': vl['D_fake']}, ii+ len(test_data_loader) *e)
+                # writer.add_scalars('test_loss/D', {'D': vl['D']}, ii+ len(test_data_loader) *e)
+                # writer.add_scalars('test_loss/G', {'G': vl['G']}, ii+ len(test_data_loader) *e)
+                for name in val_loss_names:
+                    writer.add_scalars("test_loss/"+name[0], {name: vl[name]}, ii+ len(test_data_loader) *e)
 
             pad_meter.get_eer_and_thr()
             pad_dev_mater.get_eer_and_thr()
@@ -204,6 +220,9 @@ if __name__ == '__main__':
             # logging.info("epoch %d test"%e)
             # logging.info('HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
                 # pad_meter=pad_meter))
+            tn, fn, tp, fp = pad_meter.get_four(pad_dev_mater.threshold)
+            logger.info('Epoch [{}/{}] - TEST: TN {} FN {} TP {} FP {}'.format(
+                e, opt.epoch, tn, fn, tp, fp))
             logger.info('Epoch [{}/{}] - TEST: HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
                 e, opt.epoch, pad_meter=pad_meter))
             logger.info('Epoch [{}/{}] - TEST: APCER {pad_meter.apcer:.4f} BPCER {pad_meter.bpcer:.4f} ACER {pad_meter.acer:.4f} AUC {pad_meter.auc:.4f}'.format(
