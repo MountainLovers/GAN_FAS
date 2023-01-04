@@ -12,7 +12,7 @@ npy_dirs = ["Train_npynew", "Dev_npynew", "Test_npynew"]
 rppg_dirs = ["Train_rppg", "Dev_rppg", "Test_rppg"]
 
 windows = 64
-stride = 15
+stride = 0
 
 def parseOULUProtocol(str):
     label = str.split(',')[0]
@@ -97,6 +97,8 @@ def main():
                         dstf.write(npy_path + " " + rppg_path + " " + str(st) + " " + str(ed) + " " + str(label) + "\n")
                         st += stride
                         ed += stride
+                    if stride == 0:
+                        break
                 
                 line = srcf.readline()
                 
@@ -160,6 +162,8 @@ def main():
                             dstf.write(npy_path + " " + rppg_path + " " + str(st) + " " + str(ed) + " " + str(label) + "\n")
                             st += stride
                             ed += stride
+                        if stride == 0:
+                            break
                     
                     line = srcf.readline()
                     
