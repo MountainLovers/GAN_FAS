@@ -9,7 +9,7 @@ from numpy import float32
 import os
 import random
 from loguru import logger
-# from options import opt
+from options import opt
 
 class AlignedDataset(data.Dataset):
     def __init__(self, file_list="",input_nc = 3,output_nc=1,isTrain = True): #/train or /test
@@ -19,8 +19,7 @@ class AlignedDataset(data.Dataset):
         self.input_nc = input_nc
         self.output_nc = output_nc
         self.isTrain = isTrain
-        self.data_balance = False
-        # self.data_balance = opt.data_balance
+        self.data_balance = opt.data_balance
         # if self.data_balance:
         #     print("using data_balance")
         self.AB_file_list = file_list
@@ -66,6 +65,8 @@ class AlignedDataset(data.Dataset):
                     ED.append(int(ed))
                     label.append(int(lb))
                     tnum += 1
+        self.tnum = tnum
+        self.fnum = fnum
         return (A_path,B_path,ST,ED,label), tnum, fnum
 
     def A_transform_train(self, video):
@@ -139,3 +140,6 @@ class AlignedDataset(data.Dataset):
     def __len__(self):
         """Return the total number of images in the dataset."""
         return len(self.AB_paths[0])
+
+    def get_item_num(self):
+        return self.tnum, self.fnum
