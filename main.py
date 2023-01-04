@@ -31,6 +31,8 @@ logger.add(sys.stdout, level="INFO")
 logger.add("checkpoints/%s/debug_%s_{time}.log"%(opt.name, opt.name), rotation="500 MB", level="TRACE")
 logger.add("checkpoints/%s/info_%s_{time}.log"%(opt.name, opt.name), rotation="500 MB", level="INFO")
 
+MAX_SIG_ONE_PIC = 8
+
 def setup_seed(seed):
      torch.manual_seed(seed)
      torch.cuda.manual_seed_all(seed)
@@ -39,6 +41,32 @@ def setup_seed(seed):
      torch.backends.cudnn.deterministic = True
      torch.backends.cudnn.benchmark = False
 
+
+def save_pic(ret, k, save_dir, e):
+    total = ret['fake_B'].shape[0]
+    st = 0
+    cnt = 0
+    while st < total:
+        cnt += 1
+        plt.figure(dpi=300)
+
+        for ii in range(k):
+            if st + ii >= total:
+                break
+            plt.subplot(k, 1, ii+1)
+            plt.plot(ret['fake_B'][st+ii])
+        
+        for ii in range(k):
+            if st + ii >= total:
+                break
+            plt.subplot(k, 1, ii+1)
+            plt.plot(ret['real_B'][st+ii])
+
+        plt.legend(labels=["fake","real"],loc="lower right",fontsize=6)
+        plt.savefig("%s/epoch_%d_%d.png" % (save_dir, e, cnt))
+        plt.close()
+        
+        st += k
 
 if __name__ == '__main__':
     # 设置随机数种子
@@ -49,6 +77,11 @@ if __name__ == '__main__':
     else:
         torch.backends.cudnn.benchmark = True
     best_res = 101
+
+    img_save_dir = os.path.join(opt.checkpoints_dir, opt.name, "res")
+    if not os.path.exists(img_save_dir):
+        os.makedirs(img_save_dir)
+
     train_batch_size = opt.batch_size
     test_batch_size = opt.batch_size
     
@@ -96,7 +129,9 @@ if __name__ == '__main__':
             writer.add_scalars('train_loss/D', {'D_fake_loss': model.get_current_losses()['D_fake']}, i+ len(train_data_loader) *e)
             writer.add_scalars('train_loss/D', {'D': model.get_current_losses()['D']}, i+ len(train_data_loader) *e)
             writer.add_scalars('train_loss/G', {'G': model.get_current_losses()['G']}, i+ len(train_data_loader) *e)
-            if i % 20 ==0:
+
+            train_d_flag = d_flag if d_flag > 0 else 20
+            if i % train_d_flag == 0:
                 # logging.info(model.get_current_losses())
                 # logging.info('HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
                 #     pad_meter=pad_meter_train))
@@ -120,43 +155,24 @@ if __name__ == '__main__':
                 writer.add_scalars('train_padmeter/ErrorRate', {'BPCER': pad_meter_train.bpcer}, i+ len(train_data_loader) *e)
                 writer.add_scalars('train_padmeter/ErrorRate', {'ACER': pad_meter_train.acer}, i+ len(train_data_loader) *e)
                 writer.add_scalars('train_padmeter/AUC', {'AUC': pad_meter_train.auc}, i+ len(train_data_loader) *e)
-
-                if d_flag:
-                    #############################
-                    ####    save pic    #########
-                    #############################
-                    img_save_dir = os.path.join(opt.checkpoints_dir, opt.name, "res")
-                    train_img_save_dir = os.path.join(img_save_dir, "train")
-                    test_img_save_dir = os.path.join(img_save_dir, "test")
-                    if not os.path.exists(img_save_dir):
-                        os.makedirs(img_save_dir)
-                    if not os.path.exists(train_img_save_dir):
-                        os.makedirs(train_img_save_dir)
-                    if not os.path.exists(test_img_save_dir):
-                        os.makedirs(test_img_save_dir)
-
+                
+            # save the lastest train pic
+            #############################
+            ####    save pic    #########
+            #############################
+            train_img_save_dir = os.path.join(img_save_dir, "train")
+            if not os.path.exists(train_img_save_dir):
+                os.makedirs(train_img_save_dir)
+            if d_flag > 0:
+                if i % d_flag == 0:
                     ret = model.get_current_sigs()
-
-                    # save sigal figure
-                    plt.figure(dpi=300)
-
-                    for ii in range(ret['fake_B'].shape[0]):
-                        plt.subplot(ret['fake_B'].shape[0], 1, ii+1)
-                        plt.plot(ret['fake_B'][ii])
-                    # plt.savefig("%s/epoch_%d_fake.png" % (img_save_dir, e))
-
-                    for ii in range(ret['real_B'].shape[0]):
-                        plt.subplot(ret['real_B'].shape[0], 1, ii+1)
-                        plt.plot(ret['real_B'][ii])
-
-                    plt.legend(labels=["fake","real"],loc="lower right",fontsize=6)
-                    plt.savefig("%s/epoch_%d.png" % (train_img_save_dir, e))
-
-                    plt.close()
+                    save_pic(ret, MAX_SIG_ONE_PIC, train_img_save_dir, e)
                     logger.trace("Epoch [{}] - TRAIN iter [{}/{}]: save figs ok".format(e, i, itern))
-
-                    # vutils.save_image(ret['fake_B'], "%s/epoch_%d_fake.png" % (img_save_dir, e), normalize=True)
-                    # vutils.save_image(ret['real_B'], "%s/epoch_%d_real.png" % (img_save_dir, e), normalize=True)
+            elif d_flag == -1:
+                if i == itern - 1:
+                    ret = model.get_current_sigs()
+                    save_pic(ret, MAX_SIG_ONE_PIC, train_img_save_dir, e)
+                    logger.trace("Epoch [{}] - TRAIN iter [{}/{}]: save figs ok".format(e, i, itern))
 
 
         if e%1==0:
@@ -200,29 +216,20 @@ if __name__ == '__main__':
             writer.add_scalars('test_padmeter/ErrorRate', {'BPCER': pad_meter.bpcer}, e)
             writer.add_scalars('test_padmeter/ErrorRate', {'ACER': pad_meter.acer}, e)
             writer.add_scalars('test_padmeter/AUC', {'AUC': pad_meter.auc}, e)
-
-            if d_flag:
+            
+            test_img_save_dir = os.path.join(img_save_dir, "test")
+            if not os.path.exists(test_img_save_dir):
+                os.makedirs(test_img_save_dir)
+            if d_flag > 0:
                 for i_sigs, ret in enumerate(sigs):
-                    if i_sigs % 10 != 0:
+                    if i_sigs % d_flag != 0:
                         continue
-                    # ret = model.get_current_sigs()
-                    # save sigal figure
-                    plt.figure(dpi=300)
-
-                    for ii in range(ret['fake_B'].shape[0]):
-                        plt.subplot(ret['fake_B'].shape[0], 1, ii+1)
-                        plt.plot(ret['fake_B'][ii])
-                    # plt.savefig("%s/epoch_%d_fake.png" % (img_save_dir, e))
-
-                    for ii in range(ret['real_B'].shape[0]):
-                        plt.subplot(ret['real_B'].shape[0], 1, ii+1)
-                        plt.plot(ret['real_B'][ii])
-
-                    plt.legend(labels=["fake","real"],loc="lower right",fontsize=6)
-                    plt.savefig("%s/epoch_%d_%d.png" % (test_img_save_dir, e, i_sigs))
-
-                    plt.close()
-                logger.trace("Epoch [{}] - TEST: save figs ok".format(e))
+                    save_pic(ret, MAX_SIG_ONE_PIC, test_img_save_dir, e)
+            elif d_flag == -1:
+                ret = sigs[-1]
+                save_pic(ret, MAX_SIG_ONE_PIC, test_img_save_dir, e)
+            
+            logger.trace("Epoch [{}] - TEST: save figs ok".format(e))
 
             is_best = pad_meter.hter <= best_res
             best_res = min(pad_meter.hter, best_res)
