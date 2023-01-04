@@ -4,8 +4,8 @@ import threading
 import argparse
 import numpy as np
 
-root_dir = "/mnt/hdd.user/datasets/FAS/Oulu-NPU"
-proto_root_dir = "/mnt/hdd.user/datasets/FAS/Oulu-NPU/Protocols"
+root_dir = "/public/zzj/Oulu-NPU"
+proto_root_dir = "/public/zzj/Oulu-NPU/Protocols"
 protocols = ["Protocol_1", "Protocol_2", "Protocol_3", "Protocol_4"]
 classes = ["Train", "Dev", "Test"]
 npy_dirs = ["Train_npynew", "Dev_npynew", "Test_npynew"]

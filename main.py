@@ -90,13 +90,13 @@ if __name__ == '__main__':
     test_file_list = opt.test_file_list
     model = FaceModel(opt,isTrain = True,input_nc = 3)
     test_data_loader = DataLoader(AlignedDataset(test_file_list,isTrain = False), batch_size=test_batch_size,
-                                   shuffle=True, num_workers=1,drop_last=True)
+                                   shuffle=True, num_workers=4,drop_last=True)
     dev_data_loader = DataLoader(AlignedDataset(dev_file_list,isTrain = False), batch_size=test_batch_size,
-                                   shuffle=True, num_workers=1,drop_last=True)
+                                   shuffle=True, num_workers=4,drop_last=True)
 
     train_dataset = AlignedDataset(train_file_list) 
     train_data_loader = DataLoader(train_dataset, batch_size=train_batch_size,
-                                    shuffle = True,num_workers=1,drop_last=True)
+                                    shuffle = True,num_workers=4,drop_last=True)
 
     writer.iter = 0
     for e in range(opt.epoch):
