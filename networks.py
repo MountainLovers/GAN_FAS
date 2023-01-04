@@ -103,18 +103,18 @@ class SpatioTemporalConv(nn.Module):
 class Decoder(nn.Module):
     def __init__(self, in_channels=128, out_channels=1):
         super(Decoder, self).__init__()
-        frames = 16
+        frames = 64
         self.DConv1 = nn.Sequential(
-            nn.ConvTranspose3d(in_channels, in_channels//2, kernel_size=(4,1,1), stride=(2,1,1), padding=(1,0,0), bias=False),
-            nn.InstanceNorm3d(in_channels//2, affine=True, track_running_stats=True),
+            nn.ConvTranspose3d(in_channels, in_channels, kernel_size=(4,1,1), stride=(2,1,1), padding=(1,0,0), bias=False),
+            nn.InstanceNorm3d(in_channels, affine=True, track_running_stats=True),
             nn.LeakyReLU(inplace=True)
         )
         self.DConv2 = nn.Sequential(
-            nn.ConvTranspose3d(in_channels//2, in_channels//4, kernel_size=(4,1,1), stride=(2,1,1), padding=(1,0,0), bias=False),
-            nn.InstanceNorm3d(in_channels//4, affine=True, track_running_stats=True),
+            nn.ConvTranspose3d(in_channels, in_channels, kernel_size=(4,1,1), stride=(2,1,1), padding=(1,0,0), bias=False),
+            nn.InstanceNorm3d(in_channels, affine=True, track_running_stats=True),
             nn.LeakyReLU(inplace=True)
         )
-        self.Conv = nn.Conv3d(in_channels//4, out_channels, [1,1,1],stride=1, padding=0)
+        self.Conv = nn.Conv3d(in_channels, out_channels, [1,1,1],stride=1, padding=0)
         self.poolspa = nn.AdaptiveAvgPool3d((frames,1,1))
 
 
@@ -125,10 +125,11 @@ class Decoder(nn.Module):
             returns :
                 x : rppg signal [B, T:64]
         """
-        x = self.poolspa(x)                     # [128, 16, 8, 8] -> [128, 16, 1, 1]
 
-        x = self.DConv1(x)                      # [128, 16, 1, 1] -> [64, 32, 1, 1]
-        x = self.DConv2(x)                      # [64, 32, 1, 1] -> [32, 64, 1, 1]
+        x = self.DConv1(x)                      # [128, 16, 8, 8] -> [64, 32, 8, 8]
+        x = self.DConv2(x)                      # [64, 32, 8, 8] -> [32, 64, 8, 8]
+
+        x = self.poolspa(x)                     # [32, 64, 8, 8] -> [32, 64, 1, 1]
 
         x = self.Conv(x).squeeze(1).squeeze(-1).squeeze(-1)    # [32, 64, 1, 1] -> [1, 64, 1, 1] -> [ , 64]
 
