@@ -30,7 +30,7 @@ class FaceModel(nn.Module):
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
         self.isTrain = isTrain
         self.netEncoder = networks.init_net(networks.Encoder32(),gpu_ids=self.gpu_ids)
-        self.netClassifier = networks.init_net(networks.Classifier(), gpu_ids=self.gpu_ids)
+        self.netClassifier = networks.init_net(networks.ClassifierLatentwithSig(), gpu_ids=self.gpu_ids)
         self.netSigDecoder = networks.init_net(networks.Decoder(),gpu_ids=self.gpu_ids)
         self.netSigDiscriminator = networks.init_net(networks.Discriminator(),gpu_ids=self.gpu_ids)
 
@@ -102,7 +102,7 @@ class FaceModel(nn.Module):
         self.fake_B = self.netSigDecoder(self.lantent)
         # print("fake_B: {}".format(self.fake_B))
         # logger.info("In forward(), fake_B: {}".format(self.fake_B.shape))
-        self.output = self.netClassifier(self.lantent)
+        self.output = self.netClassifier(self.lantent, self.fake_B)
 
         fake_B_repeated = self.fake_B.reshape(self.bs, 1, self.frames, 1, 1).expand(self.bs, 1, self.frames, self.height, self.width)
         self.fake_AB = torch.cat((self.real_A, fake_B_repeated), 1)       # [B, 3, frames, 128, 128] + [B, 1, frames, 128, 128] -> [B, 4, frames, 128, 128]
