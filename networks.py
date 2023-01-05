@@ -324,6 +324,49 @@ class Classifier(nn.Module):
          
         return pred 
 
+class ClassifierLatentwithSig(nn.Module):
+    def __init__(self):
+        super(ClassifierLatentwithSig, self).__init__()
+        self.convsig = nn.Sequential(
+            nn.Conv1d(1, 64, 3, stride=1, padding=1),
+            nn.BatchNorm1d(64),
+            nn.ReLU(inplace=True),
+        )
+
+        self.poolingsig = nn.AdaptiveMaxPool1d(1)
+
+        self.poolinglatent = nn.AdaptiveAvgPool3d((1, 1, 1))
+
+        self.classifier = nn.Sequential(nn.Linear(576, 256),
+                                        nn.BatchNorm1d(256),
+                                        nn.Dropout(p=0.3),
+                                        nn.ReLU(),
+                                        nn.Linear(256, 2)
+                                        )
+                    
+
+    def forward(self, latent, sig):
+        """
+            inputs :
+                latent : latent-space feature [B, C:512, T:16, W:8, H:8]
+                sig:     sig feature [B, 64]
+            returns :
+                pred
+        """
+        sig = sig.view(sig.shape[0], 1, -1)         # [B, 64] -> [B, 1, 64]
+        x1 = self.convsig(sig)                     # [B, 1, 64] -> [B, 64, 64]
+        x1 = self.poolingsig(x1)                    # [B, 64, 64] -> [B, 64, 1]
+        x1 = x1.view(x1.shape[0], -1)               # [B, 64, 1] -> [B, 64]
+        
+        x2 = self.poolinglatent(latent)             # [B, 512, 16, 8, 8] -> [B, 512, 1, 1, 1]
+        x2 = x2.view(x2.shape[0], -1)               # [B, 512, 1, 1, 1] -> [B, 512]
+        
+        x = torch.cat((x1, x2), dim=1)              # [B, 512] + [B, 64] -> [B, 576]
+
+        pred = self.classifier(x)
+         
+        return pred 
+
 class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator,self).__init__()
