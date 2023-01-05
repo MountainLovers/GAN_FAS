@@ -5,3 +5,4 @@ checkpoints
 *.log
 log/
 run.sh
+*.sh
