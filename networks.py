@@ -348,7 +348,7 @@ class ClassifierLatentwithSig(nn.Module):
 
         self.poolinglatent = nn.AdaptiveAvgPool3d((1, 1, 1))
 
-        self.classifier = nn.Sequential(nn.Linear(576, 256),
+        self.classifier = nn.Sequential(nn.Linear(192, 256),
                                         nn.BatchNorm1d(256),
                                         nn.Dropout(p=0.3),
                                         nn.ReLU(),
@@ -359,7 +359,7 @@ class ClassifierLatentwithSig(nn.Module):
     def forward(self, latent, sig):
         """
             inputs :
-                latent : latent-space feature [B, C:512, T:16, W:8, H:8]
+                latent : latent-space feature [B, C:128, T:16, W:8, H:8]
                 sig:     sig feature [B, 64]
             returns :
                 pred
@@ -369,10 +369,10 @@ class ClassifierLatentwithSig(nn.Module):
         x1 = self.poolingsig(x1)                    # [B, 64, 64] -> [B, 64, 1]
         x1 = x1.view(x1.shape[0], -1)               # [B, 64, 1] -> [B, 64]
         
-        x2 = self.poolinglatent(latent)             # [B, 512, 16, 8, 8] -> [B, 512, 1, 1, 1]
-        x2 = x2.view(x2.shape[0], -1)               # [B, 512, 1, 1, 1] -> [B, 512]
+        x2 = self.poolinglatent(latent)             # [B, 128, 16, 8, 8] -> [B, 128, 1, 1, 1]
+        x2 = x2.view(x2.shape[0], -1)               # [B, 128, 1, 1, 1] -> [B, 128]
         
-        x = torch.cat((x1, x2), dim=1)              # [B, 512] + [B, 64] -> [B, 576]
+        x = torch.cat((x1, x2), dim=1)              # [B, 128] + [B, 64] -> [B, 192]
 
         pred = self.classifier(x)
          
