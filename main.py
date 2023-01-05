@@ -28,8 +28,8 @@ writer = SummaryWriter(log_dir=run_dir)
 
 logger.remove()
 logger.add(sys.stdout, level="INFO")
-logger.add("checkpoints/%s/debug_%s_{time}.log"%(opt.name, opt.name), rotation="500 MB", level="TRACE")
-logger.add("checkpoints/%s/info_%s_{time}.log"%(opt.name, opt.name), rotation="500 MB", level="INFO")
+logger.add("%s/%s/debug_%s_{time}.log"%(opt.checkpoints_dir, opt.name, opt.name), rotation="500 MB", level="TRACE")
+logger.add("%s/%s/info_%s_{time}.log"%(opt.checkpoints_dir, opt.name, opt.name), rotation="500 MB", level="INFO")
 
 MAX_SIG_ONE_PIC = 8
 
