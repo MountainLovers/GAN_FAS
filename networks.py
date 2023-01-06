@@ -283,7 +283,7 @@ class Encoder32(nn.Module):
         out = self.down2(out)               # [128, 32, 16, 16] -> [128, 16, 8, 8]
         # print("CB2 down2: {}".format(out.shape))
 
-        out = self.CB3(out)                   # [128, 16, 8, 8] -> [128, 16, 8, 8]
+        # out = self.CB3(out)                   # [128, 16, 8, 8] -> [128, 16, 8, 8]
         # out = self.down3(out)
 
         return out
