@@ -1,5 +1,6 @@
 import networks
-import losses
+import loss.losses as losses
+from loss.dilate_loss import dilate_loss
 import torch
 from torch import nn
 import torch.autograd as autograd
@@ -21,6 +22,7 @@ class FaceModel(nn.Module):
         self.w_NP = opt.w_NP
         self.w_L1 = opt.w_L1
         self.w_MSE = opt.w_MSE
+        self.w_DILATE = opt.w_DILATE
         self.w_gan = opt.w_gan
 
         self.gpu_ids = opt.gpu_ids
@@ -48,6 +50,13 @@ class FaceModel(nn.Module):
         if self.w_MSE != 0:
             self.loss_names.append('G_MSE')
             self.val_loss_names.append('G_MSE')
+        if self.w_DILATE != 0:
+            self.loss_names.append('G_DILATE')
+            self.val_loss_names.append('G_DILATE')
+            self.loss_names.append('G_shape')
+            self.val_loss_names.append('G_shape')
+            self.loss_names.append('G_temporal')
+            self.val_loss_names.append('G_temporal')
 
         self.batch_size = opt.batch_size
         self.channels = 3
@@ -149,7 +158,11 @@ class FaceModel(nn.Module):
             self.loss_G_MSE = self.criterionMSE(self.fake_B, self.real_B)
             self.loss_G = self.loss_G + self.loss_G_MSE * self.w_MSE
             logger.debug("loss_G_MSE: {}".format(self.loss_G_MSE.item()))
-
+        if self.w_DILATE != 0:
+            self.loss_G_DILATE, self.loss_G_shape, self.loss_G_temporal = dilate_loss(self.real_B.unsqueeze(-1), self.fake_B.unsqueeze(-1), alpha=0.7, gamma=0.01, device=self.device)
+            self.loss_G = self.loss_G + self.loss_G_DILATE * self.w_DILATE
+            logger.debug("loss_G_DILATE: {}, loss_G_shape: {}, loss_G_temporal: {}".format(self.loss_G_DILATE.item(), self.loss_G_shape.item(), self.loss_G_temporal.item()))
+        
         logger.debug("loss_G: {}".format(self.loss_G.item()))
         # logger.debug("loss_G backward start")
         self.loss_G.backward()
@@ -239,6 +252,15 @@ class FaceModel(nn.Module):
             val_loss_G_MSE = self.criterionMSE(self.fake_B, self.real_B)
             val_loss_G = val_loss_G + val_loss_G_MSE * self.w_MSE
             ret['G_MSE'] = val_loss_G_MSE.item()
+        
+        if self.w_DILATE != 0:
+            val_loss_G_DILATE, val_loss_G_shape, val_loss_G_temporal = dilate_loss(self.real_B.unsqueeze(-1), self.fake_B.unsqueeze(-1), alpha=0.7, gamma=0.01, device=self.device)
+            val_loss_G = val_loss_G + val_loss_G_DILATE * self.w_DILATE
+            ret['G_DILATE'] = val_loss_G_DILATE.item()
+            ret['G_shape'] = val_loss_G_shape.item()
+            ret['G_temporal'] = val_loss_G_temporal.item()
+        
+        
         ret['G'] = val_loss_G.item()
 
         # C

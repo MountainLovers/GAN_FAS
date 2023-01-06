@@ -21,6 +21,7 @@ parser.add_argument('--w_cls', type=int, default=1, help='weight of cls loss')
 parser.add_argument('--w_NP', type=float, default=1, help='weight of NP loss')
 parser.add_argument('--w_L1', type=float, default=1, help='weight of L1 loss')
 parser.add_argument('--w_MSE', type=float, default=1, help='weight of MSE loss')
+parser.add_argument('--w_DILATE', type=float, default=1, help='weight of DILATE loss')
 parser.add_argument('--w_gan', type=int, default=1, help='weight of gan loss')
 
 # training parameters
