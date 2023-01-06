@@ -12,7 +12,7 @@ from loguru import logger
 from options import opt
 
 class AlignedDataset(data.Dataset):
-    def __init__(self, file_list="",input_nc = 3,output_nc=1,isTrain = True): #/train or /test
+    def __init__(self, file_list="",input_nc = 3,output_nc=1,isTrain = True, scale=20): #/train or /test
 
         # input_nc is input image channle (A)
         super(AlignedDataset, self).__init__()
@@ -20,7 +20,7 @@ class AlignedDataset(data.Dataset):
         self.output_nc = output_nc
         self.isTrain = isTrain
         self.data_balance = opt.data_balance
-        self.scale = 60
+        self.scale = scale
         # if self.data_balance:
         #     print("using data_balance")
         self.AB_file_list = file_list
@@ -134,12 +134,13 @@ class AlignedDataset(data.Dataset):
         if os.path.exists(B_path):
             B = np.load(B_path).astype(float32)
         else:
-            B = np.zeros(A_yuv32.shape[0], dtype=float32)
+            # B = np.zeros(A_yuv32.shape[0], dtype=float32)
+            B = np.random.normal(0,0.2,size=A_yuv32.shape[0])
         # print("dataset {} A_transform start".format(index))
         A = self.A_transform(A)
         # print("dataset {} A_transform ok".format(index))
         # print("dataset {} B start".format(index))
-        B = B[st:ed]
+        B = B[st:ed].astype(np.float32)
         B = self.scale_rppg(B, self.scale)
         B = torch.tensor(B)
         label = torch.tensor(label)

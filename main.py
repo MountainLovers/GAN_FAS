@@ -32,6 +32,7 @@ logger.add("%s/%s/debug_%s_{time}.log"%(opt.checkpoints_dir, opt.name, opt.name)
 logger.add("%s/%s/info_%s_{time}.log"%(opt.checkpoints_dir, opt.name, opt.name), rotation="500 MB", level="INFO")
 
 MAX_SIG_ONE_PIC = 8
+SIG_SCALE=30
 
 def setup_seed(seed):
      torch.manual_seed(seed)
@@ -49,17 +50,18 @@ def save_pic(ret, k, save_dir, e):
     while st < total:
         cnt += 1
         plt.figure(dpi=300)
-
         for ii in range(k):
             if st + ii >= total:
                 break
             plt.subplot(k, 1, ii+1)
+            plt.ylim(-SIG_SCALE,SIG_SCALE)
             plt.plot(ret['fake_B'][st+ii])
         
         for ii in range(k):
             if st + ii >= total:
                 break
             plt.subplot(k, 1, ii+1)
+            plt.ylim(-SIG_SCALE,SIG_SCALE)
             plt.plot(ret['real_B'][st+ii])
 
         plt.legend(labels=["fake","real"],loc="lower right",fontsize=6)
