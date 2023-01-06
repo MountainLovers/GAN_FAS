@@ -20,6 +20,7 @@ class AlignedDataset(data.Dataset):
         self.output_nc = output_nc
         self.isTrain = isTrain
         self.data_balance = opt.data_balance
+        self.scale = 60
         # if self.data_balance:
         #     print("using data_balance")
         self.AB_file_list = file_list
@@ -112,6 +113,13 @@ class AlignedDataset(data.Dataset):
             l.append(pic)
         ret = torch.stack(l, dim=1)
         return ret
+    
+    def scale_rppg(self, sig, scale):
+        ret = np.zeros_like(sig)
+        for i, v in enumerate(sig):
+            ret[i] = v * scale
+        return ret
+
 
     def __getitem__(self, index):
         A_path = self.AB_paths[0][index]
@@ -131,7 +139,8 @@ class AlignedDataset(data.Dataset):
         A = self.A_transform(A)
         # print("dataset {} A_transform ok".format(index))
         # print("dataset {} B start".format(index))
-        B = B[:64]
+        B = B[st:ed]
+        B = self.scale_rppg(B, self.scale)
         B = torch.tensor(B)
         label = torch.tensor(label)
         # print("dataset {} B ok".format(index))
