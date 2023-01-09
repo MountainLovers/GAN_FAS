@@ -107,12 +107,12 @@ class Decoder(nn.Module):
         self.DConv1 = nn.Sequential(
             nn.ConvTranspose3d(in_channels, in_channels, kernel_size=(4,1,1), stride=(2,1,1), padding=(1,0,0), bias=False),
             nn.InstanceNorm3d(in_channels, affine=True, track_running_stats=True),
-            nn.LeakyReLU(0.2, inplace=True)
+            nn.LeakyReLU(inplace=True)
         )
         self.DConv2 = nn.Sequential(
             nn.ConvTranspose3d(in_channels, in_channels, kernel_size=(4,1,1), stride=(2,1,1), padding=(1,0,0), bias=False),
             nn.InstanceNorm3d(in_channels, affine=True, track_running_stats=True),
-            nn.LeakyReLU(0.2, inplace=True)
+            nn.LeakyReLU(inplace=True)
         )
         self.Conv = nn.Conv3d(in_channels, out_channels, [1,1,1],stride=1, padding=0)
         self.poolspa = nn.AdaptiveAvgPool3d((frames,1,1))
@@ -211,7 +211,7 @@ class Block(nn.Module):
         super(Block, self).__init__()
         self.conv1 = nn.Conv3d(in_planes, planes, 3, stride=stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm3d(planes)
-        self.leakyrelu = nn.LeakyReLU(0.2, inplace=True)
+        self.leakyrelu = nn.LeakyReLU(inplace=True)
 
         self.conv2 = nn.Conv3d(planes, planes, 3, stride=stride, padding=1, bias=False)
         self.bn2 = nn.BatchNorm3d(planes)
@@ -238,36 +238,28 @@ class Block(nn.Module):
         return out
 
 class Encoder32(nn.Module):
-    def __init__(self, frame=64):
+    def __init__(self):
         super(Encoder32, self).__init__()
 
-        self.Conv1 = nn.Sequential(
-                nn.Conv3d(3, 16, [1,5,5],stride=1, padding=[0,2,2]),
-                nn.BatchNorm3d(16),
-                nn.ReLU(inplace=True),
-            )
-
-        self.Conv2 = nn.Sequential(
-            nn.Conv3d(16, 32, [1,5,5],stride=1, padding=[0,2,2]),
-            nn.BatchNorm3d(32),
-            nn.ReLU(inplace=True),
-        )
-
-        self.Conv3 = nn.Sequential(
-            nn.Conv3d(32, 64, [3, 3, 3], stride=1, padding=1),
+        self.Conv1 = nn.Sequential(                                 # [3, 64, 32, 32] -> [64, 64, 32, 32]
+            nn.Conv3d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm3d(64),
-            nn.ReLU(inplace=True),
+            nn.LeakyReLU(inplace=True)
         )
 
-        self.Conv4 = nn.Sequential(
-            nn.Conv3d(64, 64, [3, 3, 3], stride=1, padding=1),
-            nn.BatchNorm3d(64),
-            nn.ReLU(inplace=True),
+
+        downsample = nn.Sequential(
+            nn.Conv3d(64, 128, kernel_size=1, stride=1, bias=False),
+            nn.BatchNorm3d(128)
         )
-        
-        
-        self.MaxpoolTem_211_211 = nn.MaxPool3d((2, 1, 1), stride=(2, 1, 1))
-        self.MaxpoolSpaTem_244_244 = nn.MaxPool3d((2, 4, 4), stride=(2,4,4))
+        self.CB1 = Block(64, 128, 1, downsample)
+        self.down1 = nn.Conv3d(128, 128, kernel_size=2, stride=2)
+
+        self.CB2 = Block(128, 128)
+        self.down2 = nn.Conv3d(128, 128, kernel_size=2, stride=2)
+
+        self.CB3 = Block(128, 128)
+        # self.down3 = nn.Conv3d(128, 128, kernel_size=2, stride=2)
         
 
     def forward(self, x):
@@ -275,55 +267,26 @@ class Encoder32(nn.Module):
             inputs :
                 x : input feature [B, C:3, T:64, W:32, H:32]
             returns :
-                x : latent-space feature [B, C:64, T:16, W:8, H:8]
+                x : latent-space feature [B, C:128, T:16, W:8, H:8]
         """
-        # ENCODER
-        x = self.Conv1(x)		            # [b, F=3, T=64, W=32, H=32]->[b, F=16, T=64, W=32, H=32]
-        x = self.MaxpoolTem_211_211(x)   # [b, F=16, T=64, W=32, H=32]->[b, F=16, T=32, W=32, H=32]
+        # print("In Encoder32 forward(), x: {}".format(x.shape))
+        x = self.Conv1(x)                   # [3, 64, 32, 32] -> [64, 64, 32, 32]
+        # print("x1: {}".format(x))
+        # print("x: {}".format(x.shape))
+        out = self.CB1(x)                   # [64, 64, 32, 32] -> [128, 64, 32, 32]
+        # print("CB1: {}".format(out.shape))
+        out = self.down1(out)               # [128, 64, 32, 32] -> [128, 32, 16, 16]
+        # print("CB1 down1: {}".format(out.shape))
 
-        x = self.Conv2(x)		            # [b, F=16, T=32, W=32, H=32]->[b, F=32, T=32, W=32, H=32]
-        x = self.MaxpoolSpaTem_244_244(x)   # [b, F=32, T=32, W=32, H=32]->[b, F=32, T=16, W=8, H=8]
-        
-        x = self.Conv3(x)		            # [b, F=32, T=16, W=8, H=8]->[b, F=64, T=16, W=8, H=8]
-        
-        x = self.Conv4(x)		            # [b, F=64, T=16, W=8, H=8]->[b, F=64, T=16, W=8, H=8]
-        
-        return x
+        out = self.CB2(out)                   # [128, 32, 16, 16] -> [128, 32, 16, 16]
+        # print("CB2: {}".format(out.shape))
+        out = self.down2(out)               # [128, 32, 16, 16] -> [128, 16, 8, 8]
+        # print("CB2 down2: {}".format(out.shape))
 
-class Decoder32(nn.Module):
-    def __init__(self, frame=64):
-        super(Decoder32, self).__init__()
-        
-        self.TrConv1 = nn.Sequential(
-            nn.ConvTranspose3d(in_channels=64, out_channels=64, kernel_size=[4,1,1], stride=[2,1,1], padding=[1,0,0]),   #[1, 128, 32]
-            nn.BatchNorm3d(64),
-            nn.ELU(),
-        )
-        self.TrConv2 = nn.Sequential(
-            nn.ConvTranspose3d(in_channels=64, out_channels=64, kernel_size=[4,1,1], stride=[2,1,1], padding=[1,0,0]),   #[1, 128, 32]
-            nn.BatchNorm3d(64),
-            nn.ELU(),
-        )
+        # out = self.CB3(out)                   # [128, 16, 8, 8] -> [128, 16, 8, 8]
+        # out = self.down3(out)
 
-        self.ConvBlock5 = nn.Conv3d(64, 1, [1,1,1],stride=1, padding=0)
-        self.poolspa = nn.AdaptiveAvgPool3d((frame, 1, 1))
-    
-    def forward(self, x):
-        """
-            inputs :
-                x : latent-space feature [B, C:64, T:16, W:8, H:8]
-            returns :
-                sig : rPPG sig [B, T:64]
-        """
-        # DECODER
-        x = self.TrConv1(x)		            # [b, F=64, T=16, W=8, H=8]->[b, F=64, T=32, W=8, H=8]
-        x = self.TrConv2(x)		            # [b, F=64, T=32, W=8, H=8]->[b, F=64, T=64, W=8, H=8]        
-        x = self.poolspa(x)                 # [b, F=64, T=64, W=8, H=8]->[b, F=64, T=64, W=1, H=1]
-        x = self.ConvBlock5(x)             # [b, F=64, T=64, W=1, H=1]->[b, F=1, T=64, W=1, H=1]
-        
-        rPPG = x.view(-1,x.shape[2])        # [b,64]
-
-        return rPPG
+        return out
 
 class Classifier(nn.Module):
     def __init__(self, in_channels=128):
@@ -385,7 +348,7 @@ class ClassifierLatentwithSig(nn.Module):
 
         self.poolinglatent = nn.AdaptiveAvgPool3d((1, 1, 1))
 
-        self.classifier = nn.Sequential(nn.Linear(128, 256),
+        self.classifier = nn.Sequential(nn.Linear(192, 256),
                                         nn.BatchNorm1d(256),
                                         nn.Dropout(p=0.3),
                                         nn.ReLU(),
@@ -396,7 +359,7 @@ class ClassifierLatentwithSig(nn.Module):
     def forward(self, latent, sig):
         """
             inputs :
-                latent : latent-space feature [B, C:64, T:16, W:8, H:8]
+                latent : latent-space feature [B, C:128, T:16, W:8, H:8]
                 sig:     sig feature [B, 64]
             returns :
                 pred
@@ -406,10 +369,10 @@ class ClassifierLatentwithSig(nn.Module):
         x1 = self.poolingsig(x1)                    # [B, 64, 64] -> [B, 64, 1]
         x1 = x1.view(x1.shape[0], -1)               # [B, 64, 1] -> [B, 64]
         
-        x2 = self.poolinglatent(latent)             # [B, 64, 16, 8, 8] -> [B, 64, 1, 1, 1]
-        x2 = x2.view(x2.shape[0], -1)               # [B, 64, 1, 1, 1] -> [B, 64]
+        x2 = self.poolinglatent(latent)             # [B, 128, 16, 8, 8] -> [B, 128, 1, 1, 1]
+        x2 = x2.view(x2.shape[0], -1)               # [B, 128, 1, 1, 1] -> [B, 128]
         
-        x = torch.cat((x1, x2), dim=1)              # [B, 64] + [B, 64] -> [B, 128]
+        x = torch.cat((x1, x2), dim=1)              # [B, 128] + [B, 64] -> [B, 192]
 
         pred = self.classifier(x)
          
