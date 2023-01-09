@@ -93,8 +93,8 @@ class AlignedDataset(data.Dataset):
             pic = tf.adjust_contrast(pic, contrast)
             pic = tf.adjust_saturation(pic, saturation)
             # Normalize
-            # pic = tf.normalize(pic, mean=[0.59416118, 0.51189164, 0.45280306],
-                                    #  std=[0.25687563, 0.26251543, 0.26231294])
+            pic = tf.normalize(pic, mean=[0.59416118, 0.51189164, 0.45280306],
+                                     std=[0.25687563, 0.26251543, 0.26231294])
             l.append(pic)
         ret = torch.stack(l, dim=1)
         return ret
@@ -108,8 +108,8 @@ class AlignedDataset(data.Dataset):
             # # To_Tensor
             # pic_aug = tf.to_tensor(pic)
             # Normalize
-            # pic = tf.normalize(pic, mean=[0.59416118, 0.51189164, 0.45280306],
-                                    #  std=[0.25687563, 0.26251543, 0.26231294])
+            pic = tf.normalize(pic, mean=[0.59416118, 0.51189164, 0.45280306],
+                                     std=[0.25687563, 0.26251543, 0.26231294])
             l.append(pic)
         ret = torch.stack(l, dim=1)
         return ret
