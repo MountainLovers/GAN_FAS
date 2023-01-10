@@ -5,3 +5,4 @@ checkpoints
 UT_*
 *.sh
 .ipynb_checkpoints
+*checkpoints

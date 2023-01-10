@@ -1,7 +1,7 @@
 import argparse
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
+parser.add_argument('--checkpoints_dir', type=str, default='./depth_checkpoints', help='models are saved here')
 parser.add_argument('--batch_size', type=int, default=25, help='batch size')
 parser.add_argument('--epoch', type=int, default=30, help='epoch')
 parser.add_argument('--gpu_ids', type=str, default='0,1,2', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')

@@ -52,7 +52,7 @@ class FaceModel(nn.Module):
         self.real_A = input['A'].to(self.device)
         self.real_A_32 = input['A_32'].to(self.device)
         self.real_B = input['B'].to(self.device)
-        self.label = torch.tensor(input['label']).to(self.device)
+        self.label = input['label'].to(self.device)
         self.image_path = input['A_paths']
 
     def forward(self):
