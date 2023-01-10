@@ -63,21 +63,28 @@ class FaceModel(nn.Module):
 
 
     def backward_D(self):
-
+        # Train with fake
         fake_AB = torch.cat((self.real_A_32, self.fake_B), 1) 
         pred_fake = self.netDepthDiscriminator(fake_AB.detach())
-        self.loss_D_fake = self.criterionGan(pred_fake,False)
+        self.loss_D_fake = torch.mean(pred_fake)
 
+        # Train with real
         real_AB = torch.cat((self.real_A_32, self.real_B), 1) 
         pred_real = self.netDepthDiscriminator(real_AB)
-        self.loss_D_real = self.criterionGan(pred_real, True)
-        self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5 *self.w_gan
+        self.loss_D_real = torch.mean(pred_real)
+
+        # Calculate W-div gradient penalty
+        gradient_penalty = calculate_gradient_penalty(self.netDepthDiscriminator,
+                                                              real_AB.data, fake_AB.data,
+                                                              self.device)
+
+        self.loss_D = (self.loss_D_fake - self.loss_D_real) * self.w_gan + gradient_penalty
         self.loss_D.backward()
     # depth
     def backward_G(self):
         fake_AB = torch.cat((self.real_A_32, self.fake_B), 1)
         pred_fake = self.netDepthDiscriminator(fake_AB)
-        self.loss_G_GAN = self.criterionGan(pred_fake, True)
+        self.loss_G_GAN = -torch.mean(pred_fake)
         self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B)
         self.loss_G = self.loss_G_L1*self.w_L1 + self.loss_G_GAN *self.w_gan
         self.loss_G.backward()
@@ -216,3 +223,27 @@ class FaceModel(nn.Module):
                 state_dict.pop('.'.join(keys))
         else:
             self.__patch_instance_norm_state_dict(state_dict, getattr(module, key), keys, i + 1)
+
+
+def calculate_gradient_penalty(model, real_images, fake_images, device):
+    """Calculates the gradient penalty loss for WGAN GP"""
+    # Random weight term for interpolation between real and fake data
+    alpha = torch.randn((real_images.size(0), 1, 1, 1), device=device)
+    # Get random interpolation between real and fake data
+    interpolates = (alpha * real_images + ((1 - alpha) * fake_images)).requires_grad_(True)
+
+    model_interpolates = model(interpolates)
+    grad_outputs = torch.ones(model_interpolates.size(), device=device, requires_grad=False)
+
+    # Get gradient w.r.t. interpolates
+    gradients = torch.autograd.grad(
+        outputs=model_interpolates,
+        inputs=interpolates,
+        grad_outputs=grad_outputs,
+        create_graph=True,
+        retain_graph=True,
+        only_inputs=True,
+    )[0]
+    gradients = gradients.view(gradients.size(0), -1)
+    gradient_penalty = torch.mean((gradients.norm(2, dim=1) - 1) ** 2)
+    return gradient_penalty
