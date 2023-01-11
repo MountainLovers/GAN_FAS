@@ -102,6 +102,11 @@ if __name__ == '__main__':
             logging.info("epoch %d"%e)
             logging.info('HTER {pad_meter.hter:.4f} EER {pad_meter.eer:.4f} ACC {pad_meter.accuracy:.4f}'.format(
                 pad_meter=pad_meter))
+
+            ret = model.get_current_visuals()
+            vutils.save_image(ret['fake_B'], "%s/epoch_%d_fake_eval.png" % (img_save_dir, e), normalize=True)
+            vutils.save_image(ret['real_B'], "%s/epoch_%d_real_eval.png" % (img_save_dir, e), normalize=True)
+
             is_best = pad_meter.hter <= best_res
             best_res = min(pad_meter.hter, best_res)
             if is_best:
