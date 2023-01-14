@@ -94,13 +94,28 @@ class Downconv(nn.Module):
             nn.ReLU(inplace=True),
 
             conv3x3(196, out_channels),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True)
+            nn.BatchNorm2d(out_channels)
         )
 
+        if in_channels != 128:
+            self.upsample = nn.Sequential(
+                nn.Conv2d(in_channels, 128, kernel_size=1, stride=1, bias=False),
+                nn.BatchNorm2d(128)
+            )
+        else:
+            self.upsample = None
+
+        self.relu = nn.ReLU(inplace=True)
+
     def forward(self, x):
-        x = self.downconv(x)
-        return x
+        residual = x
+        out = self.downconv(x)
+        if self.upsample != None:
+            residual = self.upsample(residual)
+        out += residual
+        out = self.relu(out)
+        
+        return out
 
 
 
