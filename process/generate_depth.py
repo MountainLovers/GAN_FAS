@@ -145,5 +145,85 @@ def casiafasd_main():
             print("{}/{} done.".format(cnt, len(framepaths)))
     ferr.close()
 
+def replayattack_main():
+    TRAIN_FRAME_DIR = "/public/zzj/Replay-Attack/train_frame"
+    DEV_FRAME_DIR = "/public/zzj/Replay-Attack/devel_frame"
+    TEST_FRAME_DIR = "/public/zzj/Replay-Attack/test_frame"
+
+    TRAIN_DAT_DIR = "/public/zzj/Replay-Attack/train_dat"
+    DEV_DAT_DIR = "/public/zzj/Replay-Attack/devel_dat"
+    TEST_DAT_DIR = "/public/zzj/Replay-Attack/test_dat"
+
+    TRAIN_DEPTH_DIR = "/public/zzj/Replay-Attack/train_depth"
+    DEV_DEPTH_DIR = "/public/zzj/Replay-Attack/devel_depth"
+    TEST_DEPTH_DIR = "/public/zzj/Replay-Attack/test_depth"
+    
+
+    src_dir = TEST_FRAME_DIR
+    dat_dir = TEST_DAT_DIR
+    dst_dir = TEST_DEPTH_DIR
+
+    if not os.path.exists(dst_dir):
+        os.mkdir(dst_dir)
+
+    framepaths = get_all_files(src_dir, ".jpg")
+    ferr = open(os.path.join(dst_dir, "err_depth.txt"), 'w')
+    cnt = 0
+    for framepath in framepaths:
+        basename = os.path.basename(framepath)
+        path = os.path.dirname(framepath)
+        filename, extname = os.path.splitext(basename)
+        
+        info = filename.split('_')
+        
+        # 生成dat路径
+        dat_filename = filename + ".dat"
+        dat_path = os.path.join(dat_dir, dat_filename)
+        
+        # 生成深度图路径
+        depth_filename = filename + "_depth.jpg"
+        depth_path = os.path.join(dst_dir, depth_filename)
+        
+        # 读图片
+        img = cv2.imread(framepath)
+        
+        # 负样本
+        if info[-2] != "1":
+            cnt += 1
+            if (cnt % 100 == 0):
+                print("{}/{} done.".format(cnt, len(framepaths)))
+            continue
+            height=img.shape[0]
+            width = img.shape[1]
+            channel = img.shape[2]
+            
+            depth_img = np.zeros((height, width, channel))
+            cv2.imwrite(depth_path, depth_img)
+            
+        
+        # 正样本
+        # 已经处理过
+        # if os.path.exists(depth_path):
+        #     cnt += 1
+        #     if (cnt % 100 == 0):
+        #         print("{}/{} done.".format(cnt, len(frames)))
+        #     continue
+        
+        if not os.path.exists(dat_path):
+            # 不存在dat数据
+            ferr.write(dat_path + "\n")
+            cnt += 1
+            continue
+        else:
+            boxes = get_bbox(dat_path)
+        
+        get_depth(img, boxes, depth_path)
+         
+        cnt += 1
+        
+        if (cnt % 100 == 0):
+            print("{}/{} done.".format(cnt, len(framepaths)))
+    ferr.close()
+
 if __name__ == "__main__":
-    casiafasd_main()
+    replayattack_main()

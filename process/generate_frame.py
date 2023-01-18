@@ -15,7 +15,7 @@ def get_all_files(video_folder_path, suffix):
 
 def extract_images_from_video(video_path, dst_dir, frame_nums, videoid=None):
     video_obj = cv2.VideoCapture(video_path)
-    
+    print(video_obj.isOpened())
     basename = os.path.basename(video_path)
     path = os.path.dirname(video_path)
     filename, extname = os.path.splitext(basename)
@@ -25,7 +25,7 @@ def extract_images_from_video(video_path, dst_dir, frame_nums, videoid=None):
     fps = int(round(video_obj.get(cv2.CAP_PROP_FPS)))    # 帧率
     frame_counter = int(video_obj.get(cv2.CAP_PROP_FRAME_COUNT))    # 总帧数
 
-#     print("帧率: %d, 总帧数: %d, 分辨率: width * height %d * %d" % (fps, frame_counter, width, height))
+    print("帧率: %d, 总帧数: %d, 分辨率: width * height %d * %d" % (fps, frame_counter, width, height))
     
     frame_nums = min(frame_nums, frame_counter)
     count = 0
@@ -116,8 +116,48 @@ def oulunpu_main():
         # print(video_path + ": " + filename)
         extract_images_from_video(video_path, dst_dir, 1000)
 
+def replayattack_main(clssidx=0):
+    ROOT_DIR = "/public/zzj/Replay-Attack"
+    clss = ["train", "devel", "test"]
+    labeldir = ["attack", "real"]
+    cameradir = ["fixed", "hand"]
+
+    video_paths = []
+    for ld in labeldir:
+        if ld == "attack":
+            for cd in cameradir:
+                finaldir = os.path.join(ROOT_DIR, clss[clssidx], ld, cd)
+                tmp_paths = get_all_files(finaldir, ".mov")
+                for i, item in enumerate(tmp_paths):
+                    # 前面加fixed/hand，后面加label，0代表fake
+                    tmp_paths[i] = [item, cd, 0]
+                video_paths += tmp_paths
+        else:
+            finaldir = os.path.join(ROOT_DIR, clss[clssidx], ld)
+            tmp_paths = get_all_files(finaldir, ".mov")
+            for i, item in enumerate(tmp_paths):
+                tmp_paths[i] = [item, "real", 1]
+            video_paths += tmp_paths
+    
+    print(len(video_paths))
+
+    dst_dir = os.path.join(ROOT_DIR, clss[clssidx] + "_frame")
+    # print(dst_dir)
+    if not os.path.exists(dst_dir):
+        os.mkdir(dst_dir)
+
+    for video_item in video_paths:
+        video_path = video_item[0]
+        info = video_item[1]
+        label = str(video_item[2])
+
+        print(video_path)
+        basename = os.path.basename(video_path)
+        filename, extname = os.path.splitext(basename)
+        # print(filename)
+        extract_images_from_video(video_path, dst_dir, 1000, filename + "_" + info + "_" + label)
 
 if __name__ == "__main__":
-    oulunpu_main()
+    replayattack_main(2)
 
     

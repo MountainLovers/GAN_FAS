@@ -37,10 +37,10 @@ if __name__ == '__main__':
     dev_file_list = opt.dev_file_list
     test_file_list = opt.test_file_list
     model = FaceModel(opt,isTrain = True,input_nc = 3)
-    test_data_loader = DataLoader(AlignedDataset(test_file_list,isTrain = False), batch_size=test_batch_size,
-                                   shuffle=True, num_workers=8)
-    dev_data_loader = DataLoader(AlignedDataset(dev_file_list,isTrain = False), batch_size=test_batch_size,
-                                   shuffle=True, num_workers=8)
+    test_data_loader = DataLoader(AlignedDataset(test_file_list,isTrain = True), batch_size=test_batch_size,
+                                   shuffle=True, num_workers=8, drop_last=True)
+    dev_data_loader = DataLoader(AlignedDataset(dev_file_list,isTrain = True), batch_size=test_batch_size,
+                                   shuffle=True, num_workers=8, drop_last=True)
 
     train_dataset = AlignedDataset(train_file_list) 
     train_data_loader = DataLoader(train_dataset, batch_size=train_batch_size,

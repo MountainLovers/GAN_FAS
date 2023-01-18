@@ -126,6 +126,23 @@ def oulunpu_main():
 
     process_depth(src_dir, dst_dir)
 
+def replayattack_main():
+    TRAIN_FRAME_DIR = "/public/zzj/Replay-Attack/train_frame"
+    DEV_FRAME_DIR = "/public/zzj/Replay-Attack/devel_frame"
+    TEST_FRAME_DIR = "/public/zzj/Replay-Attack/test_frame"
+
+    TRAIN_DAT_DIR = "/public/zzj/Replay-Attack/train_dat"
+    DEV_DAT_DIR = "/public/zzj/Replay-Attack/devel_dat"
+    TEST_DAT_DIR = "/public/zzj/Replay-Attack/test_dat"
+
+    src_dir = TEST_FRAME_DIR
+    dst_dir = TEST_DAT_DIR
+
+    if not os.path.exists(dst_dir):
+        os.mkdir(dst_dir)
+
+    process_depth(src_dir, dst_dir)
+
 
 if __name__ ==  "__main__":
-    casiafasd_main()
+    replayattack_main()

@@ -7,7 +7,7 @@ proto_root_dir = os.path.join(root_dir, "Protocols")
 protocols = ["Protocol_1", "Protocol_2", "Protocol_3", "Protocol_4"]
 classes = ["Train", "Dev", "Test"]
 
-PROTOCOL = 3
+PROTOCOL = 0
 
 def parseOULUProtocol(str):
     label = str.split(',')[0]

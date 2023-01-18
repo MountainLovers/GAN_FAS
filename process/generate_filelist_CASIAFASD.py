@@ -12,6 +12,18 @@ TEST_DEPTH_DIR = os.path.join(root_dir, "test_release_depth")
 TRAIN_DAT_DIR = os.path.join(root_dir, "train_release_dat")
 TEST_DAT_DIR = os.path.join(root_dir, "test_release_dat")
 
+# root_dir = "/public/zzj/Replay-Attack"
+# proto_root_dir = os.path.join(root_dir, "Protocols")
+# TRAIN_FRAME_DIR = os.path.join(root_dir, "train_frame_crop")
+# DEV_FRAME_DIR = os.path.join(root_dir, "devel_frame_crop")
+# TEST_FRAME_DIR = os.path.join(root_dir, "test_frame_crop")
+# TRAIN_DEPTH_DIR = os.path.join(root_dir, "train_depth_crop")
+# DEV_DEPTH_DIR = os.path.join(root_dir, "devel_depth_crop")
+# TEST_DEPTH_DIR = os.path.join(root_dir, "test_depth_crop")
+# TRAIN_DAT_DIR = os.path.join(root_dir, "train_dat")
+# DEV_DAT_DIR = os.path.join(root_dir, "devel_dat")
+# TEST_DAT_DIR = os.path.join(root_dir, "test_dat")
+
 def parseCASIAName(s):
     basename = os.path.basename(s)
     filename, ext = basename.split('.')
@@ -86,5 +98,75 @@ def generate(clss, frame_dir, depth_dir, dst_dir):
 
     dstf.close()
 
+def replayattack_generate(clss, frame_dir, depth_dir, dst_dir):
+
+    def parseReplayAttackName(s):
+        basename = os.path.basename(s)
+        filename, ext = basename.split('.')
+        label = filename.split('_')[-2]
+        return label, filename
+    
+    def getReplayAttackFrameInfo(clss, videoid, label):
+        ret = []
+
+        if clss == "Train":
+            img_dir = TRAIN_FRAME_DIR
+            depth_dir = TRAIN_DEPTH_DIR
+            dat_dir = TRAIN_DAT_DIR
+        
+        if clss == "Dev":
+            img_dir = DEV_FRAME_DIR
+            depth_dir = DEV_DEPTH_DIR
+            dat_dir = DEV_DAT_DIR
+        
+        if clss == "Test":
+            img_dir = TEST_FRAME_DIR
+            depth_dir = TEST_DEPTH_DIR
+            dat_dir = TEST_DAT_DIR
+            
+        
+        frameid = videoid
+        frame_path = os.path.join(img_dir, frameid + ".jpg")
+        depth_path = os.path.join(depth_dir, frameid + "_depth.jpg")
+        dat_path = os.path.join(dat_dir, frameid + ".txt")
+        zero_path = os.path.join(depth_dir, "zero_depth"+".jpg")
+        
+        if label == 1:
+            if os.path.exists(frame_path) and os.path.exists(depth_path):
+                ret.append((frame_path, depth_path, dat_path))
+        else:
+            if os.path.exists(frame_path):
+                ret.append((frame_path, zero_path, dat_path))
+        
+        return ret
+
+    frame_paths = get_all_files(frame_dir, ".jpg")
+    depth_paths = get_all_files(depth_dir, ".jpg")
+
+    if not os.path.exists(dst_dir):
+        os.mkdir(dst_dir)
+        
+    dstf_path = os.path.join(dst_dir, clss + ".txt")
+
+    dstf = open(dstf_path, 'w')
+
+    for frame_path in frame_paths:
+        label_str, videoid = parseReplayAttackName(frame_path)
+
+        if label_str == "1":
+            label = 1
+        else:
+            label = 0
+
+        framesinfo = getReplayAttackFrameInfo(clss, videoid, label)
+        for frameinfo in framesinfo:
+            frame_path = frameinfo[0]
+            depth_path = frameinfo[1]
+            dat_path = frameinfo[2]
+            dstf.write(frame_path + " " + depth_path + " " + str(label) + "\n")
+
+    dstf.close()
+
 if __name__ == "__main__":
-    generate("Test", TEST_FRAME_DIR, TEST_DEPTH_DIR, proto_root_dir)
+    generate("Train", TRAIN_FRAME_DIR, TRAIN_DEPTH_DIR, proto_root_dir)
+    # replayattack_generate("Test", TEST_FRAME_DIR, TEST_DEPTH_DIR, proto_root_dir)
