@@ -29,15 +29,15 @@ class FaceModel(nn.Module):
         # torch.backends.cudnn.benchmark = True
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
         self.isTrain = isTrain
-        self.netEncoder = networks.init_net(networks.Encoder32(),gpu_ids=self.gpu_ids)
+        self.netEncoder = networks.init_net(networks.Encoder32(frame=64),gpu_ids=self.gpu_ids)
         self.netClassifier = networks.init_net(networks.ClassifierLatentwithSig(), gpu_ids=self.gpu_ids)
-        self.netSigDecoder = networks.init_net(networks.Decoder(),gpu_ids=self.gpu_ids)
-        self.netSigDiscriminator = networks.init_net(networks.Discriminator(),gpu_ids=self.gpu_ids)
+        self.netSigDecoder = networks.init_net(networks.Decoder32(frame=64),gpu_ids=self.gpu_ids)
+        self.netSigDiscriminator = networks.init_net(networks.DiscriminatorOnlySig(),gpu_ids=self.gpu_ids)
 
         self.model_names = ["Encoder","SigDecoder","SigDiscriminator","Classifier"]
         self.sig_names = ["real_B","fake_B"]
-        self.loss_names = ['G_GAN', 'D_real', 'D_fake','C', 'D', 'G']
-        self.val_loss_names = ['G_GAN', 'D_real', 'D_fake','C', 'D', 'G']
+        self.loss_names = ['G_GAN', 'D_GAN', 'C', 'D', 'G']
+        self.val_loss_names = ['G_GAN', 'D_GAN', 'C', 'D', 'G']
 
         if self.w_NP != 0:
             self.loss_names.append('G_NP')
@@ -56,6 +56,8 @@ class FaceModel(nn.Module):
         self.height = 128
 
         self.K = opt.k
+
+        self.tanh = nn.Tanh()
 
         # Discriminator loss
         self.criterionGan = losses.GANLoss()
@@ -104,36 +106,45 @@ class FaceModel(nn.Module):
         # logger.info("In forward(), fake_B: {}".format(self.fake_B.shape))
         self.output = self.netClassifier(self.lantent, self.fake_B)
 
-        fake_B_repeated = self.fake_B.reshape(self.bs, 1, self.frames, 1, 1).expand(self.bs, 1, self.frames, self.height, self.width)
-        self.fake_AB = torch.cat((self.real_A, fake_B_repeated), 1)       # [B, 3, frames, 128, 128] + [B, 1, frames, 128, 128] -> [B, 4, frames, 128, 128]
-        real_B_repeated = self.real_B.reshape(self.bs, 1, self.frames, 1, 1).expand(self.bs, 1, self.frames, self.height, self.width)
-        self.real_AB = torch.cat((self.real_A, real_B_repeated), 1)       # [B, 3, frames, 128, 128] + [B, 1, frames, 128, 128] -> [B, 4, frames, 128, 128]
+        self.fake_B_tanh = self.tanh(self.fake_B)
+        # fake_B_repeated = self.fake_B_tanh.reshape(self.bs, 1, self.frames, 1, 1).expand(self.bs, 1, self.frames, self.height, self.width)
+        # self.fake_AB = torch.cat((self.real_A, fake_B_repeated), 1)       # [B, 3, frames, 128, 128] + [B, 1, frames, 128, 128] -> [B, 4, frames, 128, 128]
+        self.real_B_tanh = self.tanh(self.real_B)
+        # real_B_repeated = self.real_B_tanh.reshape(self.bs, 1, self.frames, 1, 1).expand(self.bs, 1, self.frames, self.height, self.width)
+        # self.real_AB = torch.cat((self.real_A, real_B_repeated), 1)       # [B, 3, frames, 128, 128] + [B, 1, frames, 128, 128] -> [B, 4, frames, 128, 128]
 
     def backward_D(self):
         # fake_B_repeated = self.fake_B.reshape(self.bs, 1, self.frames, 1, 1).expand(self.bs, 1, self.frames, self.height, self.width)
         # fake_AB = torch.cat((self.real_A, fake_B_repeated), 1)       # [B, 3, frames, 128, 128] + [B, 1, frames, 128, 128] -> [B, 4, frames, 128, 128]
-        pred_fake = self.netSigDiscriminator(self.fake_AB.detach())
-        self.loss_D_fake = self.criterionGan(pred_fake, False)
+        pred_fake = self.netSigDiscriminator(self.fake_B_tanh.detach())
+        # self.loss_D_fake = self.criterionGan(pred_fake, False)
 
         # real_B_repeated = self.real_B.reshape(self.bs, 1, self.frames, 1, 1).expand(self.bs, 1, self.frames, self.height, self.width)
         # real_AB = torch.cat((self.real_A, real_B_repeated), 1)       # [B, 3, frames, 128, 128] + [B, 1, frames, 128, 128] -> [B, 4, frames, 128, 128]
-        pred_real = self.netSigDiscriminator(self.real_AB.detach())
-        self.loss_D_real = self.criterionGan(pred_real, True)
+        pred_real = self.netSigDiscriminator(self.real_B_tanh.detach())
+        # self.loss_D_real = self.criterionGan(pred_real, True)
 
-        self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5 * self.w_gan
-        logger.debug("loss_D_fake: {}, loss_D_real: {}, loss_D: {}".format(self.loss_D_fake.item(), self.loss_D_real.item(), self.loss_D.item()))
-        self.loss_D.backward()
+        self.loss_D_GAN = -torch.mean(pred_real) + torch.mean(pred_fake)
+        logger.debug("loss_D_GAN: {}".format(self.loss_D_GAN.item()))
+        # self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5 * self.w_gan
+        # logger.debug("loss_D_fake: {}, loss_D_real: {}, loss_D: {}".format(self.loss_D_fake.item(), self.loss_D_real.item(), self.loss_D.item()))
+        self.loss_D_GAN.backward()
 
         # train with gradient penalty
-        gradient_penalty = self.calc_gradient_penalty(self.real_AB.detach(), self.fake_AB.detach())
+        gradient_penalty = self.calc_gradient_penalty(self.real_B_tanh.detach(), self.fake_B_tanh.detach())
         logger.debug("gradient_penalty: {}".format(gradient_penalty.item()))
         gradient_penalty.backward()
+
+        self.loss_D = self.loss_D_GAN + gradient_penalty
+        logger.debug("loss_D: {}".format(self.loss_D.item()))
+
 
     def backward_G(self):
         # fake_B_repeated = self.fake_B.reshape(self.bs, 1, self.frames, 1, 1).expand(self.bs, 1, self.frames, self.height, self.width)
         # fake_AB = torch.cat((self.real_A, fake_B_repeated), 1)
-        pred_fake = self.netSigDiscriminator(self.fake_AB.detach())
-        self.loss_G_GAN = self.criterionGan(pred_fake, True)
+        pred_fake = self.netSigDiscriminator(self.fake_B_tanh.detach())
+        # self.loss_G_GAN = self.criterionGan(pred_fake, True)
+        self.loss_G_GAN = -torch.mean(pred_fake)
         self.loss_G = self.loss_G_GAN * self.w_gan
         logger.debug("loss_G_GAN: {}".format(self.loss_G_GAN.item()))
 
@@ -209,19 +220,15 @@ class FaceModel(nn.Module):
     def cal_loss(self):
         ret = {}
         # D    # [B, 3, frames, 128, 128] + [B, 1, frames, 128, 128] -> [B, 4, frames, 128, 128]
-        pred_fake = self.netSigDiscriminator(self.fake_AB.detach())
-        val_loss_D_fake = self.criterionGan(pred_fake, False)
-        pred_real = self.netSigDiscriminator(self.real_AB.detach())
-        val_loss_D_real = self.criterionGan(pred_real, True)
-        val_loss_D = (val_loss_D_fake + val_loss_D_real) * 0.5 *self.w_gan
-        # logger.debug("VAL: loss_D_fake: {}, loss_D_real: {}, loss_D: {}".format(val_loss_D_fake.item(), val_loss_D_real.item(), val_loss_D.item(), val_gradient_penalty.item()))
-        ret['D_fake'] = val_loss_D_fake.item()
-        ret['D_real'] = val_loss_D_real.item()
-        ret['D'] = val_loss_D.item()
+        pred_fake = self.netSigDiscriminator(self.fake_B_tanh.detach())
+        pred_real = self.netSigDiscriminator(self.real_B_tanh.detach())
+        val_loss_D_GAN = -torch.mean(pred_real) + torch.mean(pred_fake)
+        ret['D_GAN'] = val_loss_D_GAN.item()
+        ret['D'] = ret['D_GAN']
 
         # G
-        pred_fake = self.netSigDiscriminator(self.fake_AB.detach())
-        val_loss_G_GAN = self.criterionGan(pred_fake, True)
+        pred_fake = self.netSigDiscriminator(self.fake_B_tanh.detach())
+        val_loss_G_GAN = -torch.mean(pred_fake)
         val_loss_G = val_loss_G_GAN * self.w_gan
         ret['G_GAN'] = val_loss_G_GAN.item()
 
@@ -251,7 +258,7 @@ class FaceModel(nn.Module):
 
     def calc_gradient_penalty(self, real_data, fake_data):
         #print real_data.size()
-        alpha = torch.rand(self.batch_size, 1, 1, 1, 1)
+        alpha = torch.rand(self.batch_size, 1)
         alpha = alpha.expand(real_data.size())
         alpha = alpha.to(self.device) if self.gpu_ids else alpha
 
