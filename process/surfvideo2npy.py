@@ -8,6 +8,54 @@ import math
 import threading
 import csv
 import argparse
+import shutil
+
+# Step 1
+def readSurfList(dataset_root_dir = "/mnt/hdd.user/datasets/CASIA-SURF-3DMask/CASIA_SURF_3DMask", list_path="/mnt/hdd.user/datasets/CASIA-SURF-3DMask/CASIA_SURF_3DMask/CASIA_SURF_3DMask_list.txt"):
+    ret = []
+    realcondition_map = {"1": "1", "15": "2", "16": "3", "17": "4", "22": "5", "23": "6"}
+    with open(list_path, 'r') as f:
+        lines = f.readlines()
+    
+    for line in lines:
+        line = line.strip('\n')
+        labelnum, originVideoId = line.split(',')
+        originVideoIdVec = originVideoId.split('_')
+        
+        labelstr = originVideoIdVec[0]
+        subjectName = originVideoIdVec[1]+"-"+originVideoIdVec[2]
+
+        if labelstr == "Real":
+            label = "0"
+            condition = realcondition_map[originVideoIdVec[3]]
+            path = os.path.join(os.path.join(labelstr, originVideoIdVec[1]+"_"+originVideoIdVec[2]), originVideoIdVec[3]+".MOV")
+        else:
+            label = originVideoIdVec[3]
+            condition = originVideoIdVec[4]
+            path = os.path.join(os.path.join(os.path.join(labelstr, originVideoIdVec[1]+"_"+originVideoIdVec[2]), originVideoIdVec[3]), originVideoIdVec[4]+".MOV")
+
+        path = os.path.join(dataset_root_dir, path)
+        newVideoId = subjectName + "_" + condition + "_" + label
+        
+        # print("{} - {}".format(path, newVideoId))
+        ret.append((path, newVideoId))
+    return ret
+
+# Step 1
+def moveInOneFolderAndRename():
+    """
+        根据CASIA SURF 3D MASK提供的CASIA_SURF_3DMask_list.txt，将所有video移动到一个目录下并改名。
+        新的改名规则：subject_condition[1,6]_label[1,4].MOV
+        subject的格式为xxxx_xxx，比如0927_016
+        condition有6个，对应6个采样环境
+        label：0代表real，1-3代表3个fake等级
+    """
+    path2newidvec = readSurfList()
+    for path2newiditem in path2newidvec:
+        originpath, newid = path2newiditem
+        dstpath = TRAIN_FILE_DIR + "/" + newid + ".MOV"
+        shutil.copy(originpath, dstpath)
+        print("From {} to {} OK!".format(originpath, dstpath))
 
 def get_all_files(video_folder_path, suffix):
     all_file = []
@@ -132,7 +180,10 @@ def process(videospath, dat_dir, npy_dir, typ, w, h):
         basedir = os.path.dirname(videopath)
         videoid, extname = os.path.splitext(basename)
         
+        print("{} label: {}".format(videoid, videoid.split('_')[-1]))
         # label = videoid.split('_')[-1]
+        if (videoid.split('_')[-1] != "0"):
+            continue
 
         print("{} {} | now total: {}, now real: {}, should total: {}".format(typ, videoid, totalcnt, realcnt, shouldcnt))
         
@@ -176,8 +227,8 @@ def main():
 
     parser.add_argument('--dir', type=int, default=0)
     parser.add_argument('--threads', type=int, default=5)
-    parser.add_argument('--width', type=int, default=32)
-    parser.add_argument('--height', type=int, default=32)
+    parser.add_argument('--width', type=int, default=8)
+    parser.add_argument('--height', type=int, default=8)
 
 
     args = parser.parse_args()
@@ -190,7 +241,11 @@ def main():
 
     threads_list = []
 
-    all_videos = [all_train_video]
+    ############## Step 1 #############
+    # readSurfList()
+    # moveInOneFolderAndRename()
+    ############## End Step 1 #############
+    all_videos = [all_train_video]      # 1146
     dat_dirs = [TRAIN_DAT_DIR]
     npy_dirs = [TRAIN_NPY_DIR]
     typs = ["ALL"]
